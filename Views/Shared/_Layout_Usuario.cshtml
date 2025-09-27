@@ -1,0 +1,113 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Proyecto_DAW_Grupo_10</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/Layoutstyle.css" />
+
+
+</head>
+<body>
+    <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+
+    <nav class="sidebar" id="sidebar">
+        <a class="navbar-brand" asp-area="" asp-controller="Login" asp-action="Index">El Olivo</a>
+
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link" asp-area="" asp-controller="Usuario" asp-action="Dashboard">
+                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" asp-area="" asp-controller="Usuario" asp-action="Buscar_Enventos">
+                    <i class="fas fa-search me-2"></i> Buscar Eventos
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" asp-area="" asp-controller="Usuario" asp-action="Ver_Sesiones">
+                    <i class="fas fa-calendar-alt me-2"></i> Ver Sesiones
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" asp-area="" asp-controller="Usuario" asp-action="Inscripciones">
+                    <i class="fas fa-clipboard-list me-2"></i> Inscripciones
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" asp-area="" asp-controller="Usuario" asp-action="Certificados">
+                    <i class="fas fa-certificate me-2"></i> Certificados
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" asp-area="" asp-controller="Usuario" asp-action="MiPerfil">
+                    <i class="fas fa-user-circle me-2"></i> Mi Perfil
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" asp-area="" asp-controller="Usuario" asp-action="AcercaDe">
+                    <i class="fas fa-info-circle me-2"></i> Acerca De
+                </a>
+            </li>
+
+            <a class="logout-link" asp-area="" asp-controller="login" asp-action="Logout">
+                <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
+            </a>
+
+
+        </ul>
+
+        <a class="logout-link" asp-area="" asp-controller="Login" asp-action="Logout">
+            <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
+        </a>
+    </nav>
+
+    <div class="main-wrapper">
+        <div class="container-fluid main-content">
+            <main role="main" class="pb-3">
+                @RenderBody()
+            </main>
+        </div>
+
+        <footer class="border-top footer text-muted">
+            <div class="container">
+                &copy; 2025 - ElOlivo - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            </div>
+        </footer>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('show');
+        }
+
+        // Cerrar sidebar al hacer clic fuera en móvil
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.querySelector('.mobile-toggle');
+
+            if (window.innerWidth <= 768 &&
+                !sidebar.contains(event.target) &&
+                !toggle.contains(event.target) &&
+                sidebar.classList.contains('show')) {
+                sidebar.classList.remove('show');
+            }
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
