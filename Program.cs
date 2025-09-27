@@ -6,6 +6,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+//Login
+builder.Services.AddDistributedMemoryCache();
+
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromSeconds(3600);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
 // Configura DbContext (si estás usando Entity Framework)
 builder.Services.AddDbContext<ElOlivoDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("ElOlivoConnection")));
@@ -27,8 +37,11 @@ app.UseRouting();
 
 app.UseAuthorization();
 
+//Login
+app.UseSession();
+
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=Login}/{action=Autenticar}/{id?}");
 
 app.Run();
