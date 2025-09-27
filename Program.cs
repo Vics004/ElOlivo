@@ -1,7 +1,14 @@
+using Microsoft.EntityFrameworkCore;
+using ElOlivo.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+// Configura DbContext (si estás usando Entity Framework)
+builder.Services.AddDbContext<ElOlivoDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("ElOlivoConnection")));
 
 var app = builder.Build();
 
