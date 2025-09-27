@@ -1,0 +1,18 @@
+﻿@{
+    Layout = ViewBag.Layout ?? "_Layout";
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center" style="background-color: #e3f2fd; padding: 40px; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <h1 class="display-4" style="color: #0d47a1;">
+        Bienvenido <strong style="color: #1565c0;">@ViewBag.nombre</strong>
+    </h1>
+
+    <h2 style="color: #1976d2;">
+        Cargo: <strong style="color: #1e88e5;">@ViewData["tipoUsuario"]</strong>
+    </h2>
+
+    <p style="margin-top: 30px; font-size: 1.2em; color: #2196f3;">
+        ¡Gracias por ser parte de <strong style="color: #42a5f5;">El Olivo</strong>!
+    </p>
+</div>
