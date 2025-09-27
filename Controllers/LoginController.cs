@@ -41,7 +41,7 @@ namespace ElOlivo.Controllers
                                }).FirstOrDefault();
 
             // Establecer ViewBag con el layout correspondiente basado en el nombre del rol
-            /*switch (usuarioInfo?.rolNombre ?? rolNombre)
+           switch (usuarioInfo?.rolNombre ?? rolNombre)
             {
                 
                 case "Usuario":
@@ -52,7 +52,7 @@ namespace ElOlivo.Controllers
                     ViewBag.Layout = "_Layout";
                     ViewData["tipoUsuario"] = "Administrador";
                     break;
-            }*/
+            }
             
 
             ViewBag.nombre = nombreUsuario;
