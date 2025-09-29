@@ -49,7 +49,7 @@ namespace ElOlivo.Controllers
                     ViewData["tipoUsuario"] = "Usuario";
                     break;
                 case "Administrador":
-                    ViewBag.Layout = "_Layout";
+                    ViewBag.Layout = "_Layout_Admin";
                     ViewData["tipoUsuario"] = "Administrador";
                     break;
             }
