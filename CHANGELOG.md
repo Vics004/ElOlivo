@@ -44,3 +44,14 @@ Fecha: 27/09/2025
 Descripción: Desarrollo de las características de “inicio de sesion”, “menu lateral del usuario” y “registro del usuario” para que el usuario pueda ingresar o registrarse con las validaciones necesarias y poder navegar por las opciones en el sitio web “El Olivo”. Además, se realizaron los merges a la rama de development para realizar los cambios y pruebas necesarias para adaptar y unir las ramas de características.
 
 Impacto: Implementación importante para que el usuario pueda incorporarse y comenzar a utilizar el sitio web para utilizar las funciones para inscribirse a un evento y mucha otra información personal.
+
+[0.1.1] – 28/09/2025
+
+Versión: 0.1.1 
+
+Fecha: 28/09/2025
+
+Descripción: Desarrollo de la característica “menu lateral del administrador” para que el usuario con el rol de administrador de eventos pueda ingresar y navegar por las opciones en el sitio web “El Olivo” para crear y gestionar eventos. Además, se realizaron los merges a la rama de development para realizar los cambios y pruebas necesarias para adaptar y unir la nueva característica.
+
+Impacto: Implementación importante para que el administrador de eventos pueda comenzar próximamente a crear eventos y gestionarlos desde el sitio web.
+
