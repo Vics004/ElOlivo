@@ -13,7 +13,7 @@ namespace ElOlivo.Models
         public string? ubicacion { get; set; }
         public string? tipo_sesion { get; set; }
         public int? capacidad { get; set; }
-        public string? moderador { get; set; }
+        public int moderadorid { get; set; }
         public bool? activo { get; set; }
         public int? eventoid { get; set; }
     }
