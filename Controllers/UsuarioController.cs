@@ -64,7 +64,9 @@ namespace ElOlivo.Controllers
                                                fecha_inicio = e.fecha_inicio,
                                                fecha_fin = e.fecha_fin,
                                                EstadoNombre = es.nombre,
-                                               EstadoId = es.estadoid
+                                               EstadoId = es.estadoid,
+                                               /*Agregado eventoid para vista ver-mas*/
+                                               e.eventoid
                                            }).ToListAsync();
 
                 return View(inscripciones);
@@ -106,6 +108,72 @@ namespace ElOlivo.Controllers
                 _logger.LogError(ex, "Error al cancelar inscripción {Id}", id);
                 return Content(ex.ToString());
             }
+        }
+
+        /*Ver_Mas*/
+        public IActionResult Ver_Mas(int id)
+        {
+            var usuarioId = HttpContext.Session.GetInt32("usuarioId");
+            if (usuarioId == null)
+                return RedirectToAction("Autenticar", "Login");
+
+            
+            var inscripcion = _elOlivoDbContext.inscripcion
+                .FirstOrDefault(i => i.eventoid == id && i.usuarioid == usuarioId);
+
+            if (inscripcion == null)
+                return RedirectToAction("Inscripciones");
+
+            //Obtener estado para etiqueta
+            var inscripcionConEstado = (from i in _elOlivoDbContext.inscripcion
+                                        join est in _elOlivoDbContext.estado
+                                            on i.estadoid equals est.estadoid
+                                        where i.eventoid == id && i.usuarioid == usuarioId
+                                        select new
+                                        {
+                                            inscripcion = i,
+                                            estadoNombre = est.nombre
+                                        }).FirstOrDefault();
+
+
+            //Obtener información para mostrar las sesiones con sus actividades
+            var evento = _elOlivoDbContext.evento.FirstOrDefault(e => e.eventoid == id);
+
+            
+            var sesiones = (from s in _elOlivoDbContext.sesion
+                            where s.eventoid == id && s.activo == true
+                            orderby s.fecha_inicio
+                            select new
+                            {
+                                s.sesionid,
+                                s.titulo,
+                                s.descripcion,
+                                s.fecha_inicio,
+                                s.fecha_fin,
+                                actividades = (from a in _elOlivoDbContext.actividad
+                                               join u in _elOlivoDbContext.usuario on a.ponenteid equals u.usuarioid
+                                               where a.sesionid == s.sesionid && a.activo == true
+                                               orderby a.hora_inicio
+                                               select new
+                                               {
+                                                   a.agendaid,
+                                                   a.nombre,
+                                                   a.descripcion,
+                                                   a.hora_inicio,
+                                                   a.hora_fin,
+                                                   ponenteNombre = u.nombre + " " + u.apellido
+                                               }).ToList()
+                            }).ToList();
+
+            ViewBag.Evento = evento;
+            ViewBag.Sesiones = sesiones;
+            ViewBag.InscripcionEstado =
+                inscripcionConEstado == null
+                ? "Cancelado"
+                : (inscripcionConEstado.estadoNombre == "Inscrito" ? "Confirmada"
+                : (inscripcionConEstado.estadoNombre == "Pendiente" ? "En proceso"
+                : inscripcionConEstado.estadoNombre));
+            return View();
         }
 
 

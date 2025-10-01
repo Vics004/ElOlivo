@@ -38,7 +38,10 @@ else
                     <td>@inscripcion.EstadoNombre</td>
                     <td>
 
-                        <button type="submit" class="btn btn-success btn-sm">Ver más</button>
+                        <a asp-action="Ver_Mas" asp-route-id="@inscripcion.eventoid" class="btn btn-success btn-sm">
+                            Ver más
+                        </a>
+                        
                         <button type="submit" class="btn btn-primary btn-sm">Comprobante</button>
 
                         @if (inscripcion.EstadoId != 1)
