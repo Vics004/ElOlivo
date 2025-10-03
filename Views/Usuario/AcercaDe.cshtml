@@ -4,4 +4,158 @@
 @{
     Layout = "_Layout_Usuario";
 }
-<h3>El Olivo</h3>
+<style>
+    body {
+        background: linear-gradient(135deg, #0a3d1e, #1a5c2e, #0f4b24);
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .scroll-section {
+        opacity: 0;
+        transform: translateY(50px);
+        transition: all 0.8s ease-out;
+    }
+
+        .scroll-section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+    .gradient-text {
+        background: linear-gradient(45deg, #90ee90, #32cd32, #228b22, #006400);
+        background-size: 300% 300%;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: gradientMove 4s ease-in-out infinite;
+    }
+
+    .gradient-text-light {
+        background: linear-gradient(45deg, #006400);
+        background-size: 300% 300%;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: gradientMove 3.5s ease-in-out infinite;
+    }
+
+    @@keyframes gradientMove {
+        0% {
+            background-position: 0% 50%;
+        }
+
+        50% {
+            background-position: 100% 50%;
+        }
+
+        100% {
+            background-position: 0% 50%;
+        }
+    }
+
+    .card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(15px);
+        border: none;
+        border-radius: 25px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        margin: 20px 0;
+    }
+
+    .container-fluid {
+        padding-left: 30px;
+        padding-right: 30px;
+    }
+
+    .text-content {
+        color: #2d5016;
+        font-weight: 500;
+    }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body p-5" style="min-height: 90vh;">
+                    <!-- Título con animación de gradiente -->
+                    <div class="scroll-section text-center mb-5 pt-4">
+                        <h1 class="gradient-text" style="font-size: 4rem; font-weight: bold; margin-bottom: 2rem;">El Olivo</h1>
+                    </div>
+
+                    <!-- Descripción de la empresa -->
+                    <div class="scroll-section mb-5">
+                        <h2 class="gradient-text-light mb-4" style="font-weight: bold; font-size: 2.2rem;">Descripción de la empresa</h2>
+                        <p class="text-content" style="line-height: 1.8; font-size: 1.3rem;">
+                            Somos una organización dedicada a la gestión y optimización de eventos y conferencias, ofreciendo
+                            soluciones digitales que facilitan la inscripción de participantes, la organización de agendas
+                            interactivas, la emisión de certificados electrónicos y el seguimiento integral de la participación.
+                        </p>
+                    </div>
+
+                    <!-- Misión -->
+                    <div class="scroll-section mb-5">
+                        <h2 class="gradient-text-light mb-4" style="font-weight: bold; font-size: 2.2rem;">Misión</h2>
+                        <p class="text-content" style="line-height: 1.8; font-size: 1.3rem;">
+                            Brindar herramientas digitales innovadoras que optimicen la planificación, ejecución y evaluación de
+                            eventos y conferencias, garantizando procesos eficientes y una experiencia enriquecedora tanto para
+                            organizadores como para participantes.
+                        </p>
+                    </div>
+
+                    <!-- Visión -->
+                    <div class="scroll-section mb-5">
+                        <h2 class="gradient-text-light mb-4" style="font-weight: bold; font-size: 2.2rem;">Visión</h2>
+                        <p class="text-content" style="line-height: 1.8; font-size: 1.3rem;">
+                            Ser una plataforma líder en la digitalización de eventos y conferencias, reconocida por su innovación,
+                            accesibilidad y capacidad de transformar la manera en que se gestionan y viven los eventos a nivel
+                            nacional e internacional.
+                        </p>
+                    </div>
+
+                    <!-- Contacto -->
+                    <div class="scroll-section">
+                        <h2 class="gradient-text-light mb-4" style="font-weight: bold; font-size: 2.2rem;">Contacto</h2>
+                        <p class="text-content" style="line-height: 1.8; font-size: 1.3rem;">
+                            Si tiene alguna duda o desea solicitar un cambio de rol, puede contactarnos a través de nuestro correo
+                            electrónico institucional.
+                        </p>
+                        <p class="text-content mt-4" style="font-size: 1.5rem; font-weight: 600;">
+                            <span class="gradient-text" style="font-size: 1.6rem;">ElOlivo@gmail.com</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Animación al hacer scroll
+    function checkScroll() {
+        const sections = document.querySelectorAll('.scroll-section');
+        sections.forEach(section => {
+            const sectionTop = section.getBoundingClientRect().top;
+            const windowHeight = window.innerHeight;
+            if (sectionTop < windowHeight * 0.85) {
+                section.classList.add('visible');
+            }
+        });
+    }
+
+    // Inicializar
+    document.addEventListener('DOMContentLoaded', function () {
+        checkScroll();
+        window.addEventListener('scroll', checkScroll);
+
+        // Activar todas las secciones después de un tiempo por si no hay scroll
+        setTimeout(() => {
+            document.querySelectorAll('.scroll-section').forEach(section => {
+                section.classList.add('visible');
+            });
+        }, 500);
+    });
+</script>

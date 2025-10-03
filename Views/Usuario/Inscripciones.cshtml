@@ -1,4 +1,5 @@
 ﻿@* Views/Usuario/Inscripciones.cshtml *@
+<link rel="stylesheet" href="~/css/Tablas.css" />
 
 @model IEnumerable<dynamic>
 
@@ -7,7 +8,52 @@
     ViewData["Title"] = "Eventos Inscritos";
 }
 
-<h2 class="mb-3">Eventos Inscritos</h2>
+<h2 class="page-title">Eventos Inscritos</h2>
+
+<!-- Filtros -->
+<div class="filtros-card">
+    <form asp-action="Inscripciones" method="get" class="filtros-form">
+        <div class="filtros-grid">
+            <!-- Buscar -->
+            <div class="filtro-item">
+                <label class="filtro-label">Buscar evento</label>
+                <input type="text" name="search" placeholder="Nombre o descripción..."
+                       value="@Context.Request.Query["search"]" class="busqueda-input" />
+            </div>
+
+            <!-- Estado -->
+            <div class="filtro-item">
+                <label class="filtro-label">Estado</label>
+                <select name="estado" class="busqueda-input">
+                    <option value="">-- Estado --</option>
+                    <option value="1" selected="@(Context.Request.Query["estado"] == "1")">Cancelada</option>
+                    <option value="2" selected="@(Context.Request.Query["estado"] == "2")">Confirmada</option>
+                </select>
+            </div>
+
+            <!-- Fecha inicio -->
+            <div class="filtro-item">
+                <label class="filtro-label">Fecha desde</label>
+                <input type="date" name="fechaInicio"
+                       value="@Context.Request.Query["fechaInicio"]" class="busqueda-input" />
+            </div>
+
+            <!-- Fecha fin -->
+            <div class="filtro-item">
+                <label class="filtro-label">Fecha hasta</label>
+                <input type="date" name="fechaFin"
+                       value="@Context.Request.Query["fechaFin"]" class="busqueda-input" />
+            </div>
+
+            <!-- Botones -->
+            <div class="botones-filtro">
+                <button type="submit" class="btn btn-success">Buscar</button>
+                <button type="submit" class="btn btn-danger" name="limpiar" value="true">Limpiar</button>
+            </div>
+        </div>
+    </form>
+</div>
+
 
 
 @if (Model == null || !Model.Any())
@@ -16,69 +62,100 @@
 }
 else
 {
-    <table class="table table-striped table-bordered">
-        <thead class="table-dark">
-            <tr>
-                <th>Evento</th>
-                <th>Descripción</th>
-                <th>Fecha inicio</th>
-                <th>Fecha fin</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var inscripcion in Model)
-            {
-                <tr>
-                    <td>@inscripcion.nombre</td>
-                    <td>@inscripcion.descripcion</td>
-                    <td>@(inscripcion.fecha_inicio?.ToString("dd/MM/yyyy") ?? "-")</td>
-                    <td>@(inscripcion.fecha_fin?.ToString("dd/MM/yyyy") ?? "-")</td>
-                    <td>@inscripcion.EstadoNombre</td>
-                    <td>
+    <div class="eventos-container">
+        <!-- Encabezado -->
+        <div class="eventos-header">
+            <div class="eventos-header-item">Evento</div>
+            <div class="eventos-header-item">Descripción</div>
+            <div class="eventos-header-item">Fecha Inicio</div>
+            <div class="eventos-header-item">Fecha Fin</div>
+            <div class="eventos-header-item">Estado</div>
+            <div class="eventos-header-item">Acciones</div>
+        </div>
 
-                        <button type="submit" class="btn btn-success btn-sm">Ver más</button>
-                        <button type="submit" class="btn btn-primary btn-sm">Comprobante</button>
+        <!-- Tarjetas de Eventos -->
+        @foreach (var inscripcion in Model)
+        {
+            <div class="evento-card">
+                <!-- Nombre del Evento -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Evento</span>
+                    <span class="evento-item-value evento-nombre">@inscripcion.nombre</span>
+                </div>
 
+                <!-- Descripción -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Descripción</span>
+                    <span class="evento-item-value evento-descripcion">@inscripcion.descripcion</span>
+                </div>
+
+                <!-- Fecha Inicio -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Fecha Inicio</span>
+                    <span class="evento-item-value">@(inscripcion.fecha_inicio?.ToString("dd/MM/yyyy") ?? "-")</span>
+                </div>
+
+                <!-- Fecha Fin -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Fecha Fin</span>
+                    <span class="evento-item-value">@(inscripcion.fecha_fin?.ToString("dd/MM/yyyy") ?? "-")</span>
+                </div>
+
+                <!-- Estado -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Estado</span>
+                    <span class="estado-badge @(inscripcion.EstadoId == 1 ? "estado-cancelada" : "estado-confirmada")">
+                        @inscripcion.EstadoNombre
+                    </span>
+                </div>
+
+                <!-- Acciones -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Acciones</span>
+                    <div class="evento-acciones">
+                        <button type="button" class="btn btn-success">Ver más</button>
+                        <button type="button" class="btn btn-primary">Comprobante</button>
                         @if (inscripcion.EstadoId != 1)
                         {
-                            <form asp-action="CancelarInscripcion" method="post" style="display:inline" class="cancelar-form">
+                            <form asp-action="CancelarInscripcion" method="post" class="cancelar-form">
                                 <input type="hidden" name="id" value="@inscripcion.inscripcionid" />
-                                <button type="submit" class="btn btn-danger btn-sm">Cancelar</button>
+                                <button type="submit" class="btn btn-danger">Cancelar</button>
                             </form>
-                            
                         }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
 }
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.querySelectorAll('.cancelar-form').forEach(form => {
             form.addEventListener('submit', function (e) {
-                e.preventDefault(); // evita enviar el formulario automáticamente
-
+                e.preventDefault();
                 Swal.fire({
                     title: '¿Estás seguro?',
                     text: "¿Quieres cancelar la inscripción?",
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
+                    confirmButtonColor: '#2d7a4f',
+                    cancelButtonColor: '#757575',
                     confirmButtonText: 'Sí, cancelar',
                     cancelButtonText: 'No'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        form.submit(); // enviar el formulario si confirma
+                        form.submit();
                     }
                 });
             });
         });
     </script>
+
+
 }
+
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
