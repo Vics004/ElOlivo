@@ -41,32 +41,65 @@ namespace ElOlivo.Controllers
             return View();
         }
 
-
-
         // Lista las inscripciones del usuario logueado desde sesión
-        public async Task<IActionResult> Inscripciones()
+        public async Task<IActionResult> Inscripciones(string? search, int? estado, DateTime? fechaInicio, DateTime? fechaFin)
         {
             try
             {
+                // Detectar si se presionó el botón "Limpiar"
+                if (Request.Query.ContainsKey("limpiar"))
+                {
+                    return RedirectToAction("Inscripciones");
+                }
+
                 int? usuarioId = HttpContext.Session.GetInt32("usuarioId");
                 if (usuarioId == null)
                     return RedirectToAction("Login", "Account");
 
-                var inscripciones = await (from i in _elOlivoDbContext.inscripcion
-                                           join e in _elOlivoDbContext.evento on i.eventoid equals e.eventoid
-                                           join es in _elOlivoDbContext.estado on i.estadoid equals es.estadoid
-                                           where i.usuarioid == usuarioId
-                                           select new
-                                           {
-                                               i.inscripcionid,
-                                               nombre = e.nombre,
-                                               descripcion = e.descripcion,
-                                               fecha_inicio = e.fecha_inicio,
-                                               fecha_fin = e.fecha_fin,
-                                               EstadoNombre = es.nombre,
-                                               EstadoId = es.estadoid
-                                           }).ToListAsync();
+                var query = from i in _elOlivoDbContext.inscripcion
+                            join e in _elOlivoDbContext.evento on i.eventoid equals e.eventoid
+                            join es in _elOlivoDbContext.estado on i.estadoid equals es.estadoid
+                            where i.usuarioid == usuarioId
+                            select new
+                            {
+                                i.inscripcionid,
+                                nombre = e.nombre,
+                                descripcion = e.descripcion,
+                                fecha_inicio = e.fecha_inicio,
+                                fecha_fin = e.fecha_fin,
+                                EstadoNombre = es.nombre,
+                                EstadoId = es.estadoid
+                            };
 
+                // ------------Filtros------------
+                //buscar
+                if (!string.IsNullOrEmpty(search))
+                {
+                    string searchLower = search.ToLower();
+                    query = query.Where(x =>
+                        x.nombre.ToLower().Contains(searchLower) ||
+                        x.descripcion.ToLower().Contains(searchLower));
+                }
+
+                // estado
+                if (estado.HasValue)
+                {
+                    query = query.Where(x => x.EstadoId == estado.Value);
+                }
+
+                // fechas
+                if (fechaInicio.HasValue)
+                {
+                    var inicioUtc = DateTime.SpecifyKind(fechaInicio.Value, DateTimeKind.Utc);
+                    query = query.Where(x => x.fecha_inicio >= inicioUtc);
+                }
+                if (fechaFin.HasValue)
+                {
+                    var finUtc = DateTime.SpecifyKind(fechaFin.Value, DateTimeKind.Utc);
+                    query = query.Where(x => x.fecha_fin <= finUtc);
+                }
+
+                var inscripciones = await query.ToListAsync();
                 return View(inscripciones);
             }
             catch (Exception ex)

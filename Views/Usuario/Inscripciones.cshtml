@@ -1,7 +1,6 @@
 ﻿@* Views/Usuario/Inscripciones.cshtml *@
 <link rel="stylesheet" href="~/css/Tablas.css" />
 
-	@* Plantilla Razor para mostrar las inscripciones de eventos de un usuario *@
 @model IEnumerable<dynamic>
 
 @{
@@ -10,6 +9,52 @@
 }
 
 <h2 class="page-title">Eventos Inscritos</h2>
+
+<!-- Filtros -->
+<div class="filtros-card">
+    <form asp-action="Inscripciones" method="get" class="filtros-form">
+        <div class="filtros-grid">
+            <!-- Buscar -->
+            <div class="filtro-item">
+                <label class="filtro-label">Buscar evento</label>
+                <input type="text" name="search" placeholder="Nombre o descripción..."
+                       value="@Context.Request.Query["search"]" class="busqueda-input" />
+            </div>
+
+            <!-- Estado -->
+            <div class="filtro-item">
+                <label class="filtro-label">Estado</label>
+                <select name="estado" class="busqueda-input">
+                    <option value="">-- Estado --</option>
+                    <option value="1" selected="@(Context.Request.Query["estado"] == "1")">Cancelada</option>
+                    <option value="2" selected="@(Context.Request.Query["estado"] == "2")">Confirmada</option>
+                </select>
+            </div>
+
+            <!-- Fecha inicio -->
+            <div class="filtro-item">
+                <label class="filtro-label">Fecha desde</label>
+                <input type="date" name="fechaInicio"
+                       value="@Context.Request.Query["fechaInicio"]" class="busqueda-input" />
+            </div>
+
+            <!-- Fecha fin -->
+            <div class="filtro-item">
+                <label class="filtro-label">Fecha hasta</label>
+                <input type="date" name="fechaFin"
+                       value="@Context.Request.Query["fechaFin"]" class="busqueda-input" />
+            </div>
+
+            <!-- Botones -->
+            <div class="botones-filtro">
+                <button type="submit" class="btn btn-success">Buscar</button>
+                <button type="submit" class="btn btn-danger" name="limpiar" value="true">Limpiar</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+
 
 @if (Model == null || !Model.Any())
 {
@@ -66,7 +111,7 @@ else
 
                 <!-- Acciones -->
                 <div class="evento-item">
-                    <span class="evento-item-label" style="align-content" > Acciones</span>
+                    <span class="evento-item-label">Acciones</span>
                     <div class="evento-acciones">
                         <button type="button" class="btn btn-success">Ver más</button>
                         <button type="button" class="btn btn-primary">Comprobante</button>
@@ -107,6 +152,10 @@ else
             });
         });
     </script>
+
+
 }
+
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
