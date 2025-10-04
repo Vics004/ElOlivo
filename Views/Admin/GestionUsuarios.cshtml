@@ -1,7 +1,109 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@* Views/AdminEventos/GestionUsuarios.cshtml *@
+<link rel="stylesheet" href="~/css/Tablas.css" />
+
+@model IEnumerable<dynamic>
+
 @{
     Layout = "_Layout_Admin";
+    ViewData["Title"] = "Gestión de Usuarios";
 }
-<h4>Gestión de Usuarios</h4>
+
+<h2 class="page-title">Gestión de Usuarios</h2>
+
+<!-- Filtros -->
+<div class="filtros-card">
+    <form asp-action="GestionUsuarios" method="get" class="filtros-form">
+        <div class="filtros-grid">
+            <!-- Buscar por usuario -->
+            <div class="filtro-item">
+                <label class="filtro-label">Buscar usuario</label>
+                <input type="text" name="search" placeholder="Nombre del usuario..."
+                       value="@Context.Request.Query["search"]" class="busqueda-input" />
+            </div>
+
+            <!-- Buscar por evento -->
+            <div class="filtro-item">
+                <label class="filtro-label">Buscar evento</label>
+                <input type="text" name="eventoSearch" placeholder="Nombre del evento..."
+                       value="@Context.Request.Query["eventoSearch"]" class="busqueda-input" />
+            </div>
+
+            <!-- Botones -->
+            <div class="botones-filtro">
+                <button type="submit" class="btn btn-success">Buscar</button>
+                <button type="submit" class="btn btn-danger" name="limpiar" value="true">Limpiar</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@if (Model == null || !Model.Any())
+{
+    <div class="alert alert-info">No hay usuarios inscritos en tus eventos.</div>
+}
+else
+{
+    <div class="eventos-container">
+        <!-- Encabezado -->
+        <div class="eventos-header">
+            <div class="eventos-header-item">Usuario</div>
+            <div class="eventos-header-item">Correo</div>
+            <div class="eventos-header-item">Teléfono</div>
+            <div class="eventos-header-item">Evento</div>
+            <div class="eventos-header-item">Asistencia</div>
+            <div class="eventos-header-item">Acciones</div>
+        </div>
+
+        <!-- Tarjetas de Usuarios -->
+        @foreach (var usuario in Model)
+        {
+            <div class="evento-card">
+                <!-- Nombre del Usuario -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Usuario</span>
+                    <span class="evento-item-value evento-nombre">@usuario.NombreUsuario</span>
+                </div>
+
+                <!-- Correo -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Correo</span>
+                    <span class="evento-item-value evento-descripcion">@usuario.Email</span>
+                </div>
+
+                <!-- Teléfono -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Teléfono</span>
+                    <span class="evento-item-value">@usuario.Telefono</span>
+                </div>
+
+                <!-- Evento -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Evento</span>
+                    <span class="evento-item-value">@usuario.NombreEvento</span>
+                </div>
+
+                <!-- Asistencia -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Asistencia</span>
+                    <span class="estado-badge
+                        @(usuario.PorcentajeAsistencia >= 80 ? "estado-confirmada" :
+                          usuario.PorcentajeAsistencia >= 50 ? "estado-proceso" :
+                          usuario.PorcentajeAsistencia > 0 ? "estado-pendiente" : "estado-cancelada")">
+                        @usuario.PorcentajeAsistencia% (@usuario.AsistenciasRegistradas/@usuario.TotalSesiones)
+                    </span>
+                </div>
+
+                <!-- Acciones -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Acciones</span>
+                    <div class="evento-acciones">
+                        <button type="button" class="btn btn-success">Ver más</button>
+                        <button type="button" class="btn btn-danger">Cancelar Inscripción</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+

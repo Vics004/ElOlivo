@@ -1,5 +1,7 @@
 ﻿using ElOlivo.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
 using static ElOlivo.Servicios.AutenticationAttribute;
 
 namespace ElOlivo.Controllers
@@ -173,10 +175,126 @@ namespace ElOlivo.Controllers
             return Json(new { success = true, eventos = eventosFiltrados });
         }
 
-        
-        public IActionResult GestionUsuarios()
+
+
+
+
+
+
+
+
+
+        public async Task<IActionResult> GestionUsuarios(string? search, string? eventoSearch)
         {
-            return View();
+            try
+            {
+                // Detectar si se presionó el botón "Limpiar"
+                if (Request.Query.ContainsKey("limpiar"))
+                {
+                    return RedirectToAction("GestionUsuarios");
+                }
+
+                int? usuarioAdminId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioAdminId == null)
+                    return RedirectToAction("Login", "Account");
+
+                // Paso 1: Obtener los eventos del administrador
+                var eventosAdmin = await _elOlivoDbContext.evento
+                    .Where(e => e.usuarioadminid == usuarioAdminId)
+                    .Select(e => new { e.eventoid, e.nombre })
+                    .ToListAsync();
+
+                if (!eventosAdmin.Any())
+                {
+                    return View(new List<dynamic>());
+                }
+
+                var eventosIds = eventosAdmin.Select(e => e.eventoid).ToList();
+
+                // Paso 2: Obtener las inscripciones a los eventos del admin
+                var inscripcionesQuery = from i in _elOlivoDbContext.inscripcion
+                                         join u in _elOlivoDbContext.usuario on i.usuarioid equals u.usuarioid
+                                         join e in _elOlivoDbContext.evento on i.eventoid equals e.eventoid
+                                         where eventosIds.Contains(e.eventoid)
+                                         select new
+                                         {
+                                             InscripcionId = i.inscripcionid,
+                                             UsuarioId = u.usuarioid,
+                                             NombreUsuario = u.nombre + " " + u.apellido,
+                                             Email = u.email,
+                                             Telefono = u.telefono,
+                                             EventoId = e.eventoid,
+                                             NombreEvento = e.nombre
+                                         };
+
+                // Aplicar filtros
+                if (!string.IsNullOrEmpty(search))
+                {
+                    string searchLower = search.ToLower();
+                    inscripcionesQuery = inscripcionesQuery.Where(x =>
+                        x.NombreUsuario.ToLower().Contains(searchLower));
+                }
+
+                if (!string.IsNullOrEmpty(eventoSearch))
+                {
+                    string eventSearchLower = eventoSearch.ToLower();
+                    inscripcionesQuery = inscripcionesQuery.Where(x =>
+                        x.NombreEvento.ToLower().Contains(eventSearchLower));
+                }
+
+                var inscripciones = await inscripcionesQuery.ToListAsync();
+
+                // Paso 3: Obtener las sesiones de cada evento
+                var sesionesPorEvento = await _elOlivoDbContext.sesion
+                    .Where(s => eventosIds.Contains(s.eventoid.Value) && s.activo == true)
+                    .GroupBy(s => s.eventoid)
+                    .ToDictionaryAsync(g => g.Key, g => g.Count());
+
+                // Paso 4: Obtener las asistencias de cada usuario (CORREGIDO - nombres correctos)
+                var usuariosIds = inscripciones.Select(i => i.UsuarioId).Distinct().ToList();
+
+                var todasAsistencias = await (from a in _elOlivoDbContext.asistencia
+                                              join s in _elOlivoDbContext.sesion on a.sesionid equals s.sesionid
+                                              where eventosIds.Contains(s.eventoid.Value) && usuariosIds.Contains(a.usuarioid.Value)
+                                              select new
+                                              {
+                                                  UsuarioId = a.usuarioid,
+                                                  EventoId = s.eventoid
+                                              }).ToListAsync();
+
+                // Paso 5: Combinar toda la información (EN MEMORIA)
+                var usuariosConAsistencia = new List<dynamic>();
+
+                foreach (var inscripcion in inscripciones)
+                {
+                    int totalSesiones = sesionesPorEvento.ContainsKey(inscripcion.EventoId) ? sesionesPorEvento[inscripcion.EventoId] : 0;
+
+                    // Contar asistencias para este usuario en este evento
+                    int asistencias = todasAsistencias
+                        .Count(a => a.UsuarioId == inscripcion.UsuarioId && a.EventoId == inscripcion.EventoId);
+
+                    double porcentajeAsistencia = totalSesiones > 0 ? Math.Round((asistencias * 100.0) / totalSesiones, 1) : 0;
+
+                    usuariosConAsistencia.Add(new
+                    {
+                        inscripcion.InscripcionId,
+                        inscripcion.NombreUsuario,
+                        inscripcion.Email,
+                        inscripcion.Telefono,
+                        inscripcion.NombreEvento,
+                        TotalSesiones = totalSesiones,
+                        AsistenciasRegistradas = asistencias,
+                        PorcentajeAsistencia = porcentajeAsistencia
+                    });
+                }
+
+                return View(usuariosConAsistencia);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener usuarios inscritos");
+                return Content(ex.ToString());
+            }
         }
 
         public IActionResult GestionEventos()
@@ -184,9 +302,49 @@ namespace ElOlivo.Controllers
             return View();
         }
 
-        public IActionResult GestionInscripciones()
+        public async Task<IActionResult> GestionInscripciones(string? search)
         {
-            return View();
+            try
+            {
+                // Detectar si se presionó el botón "Limpiar"
+                if (Request.Query.ContainsKey("limpiar"))
+                {
+                    return RedirectToAction("GestionInscripciones");
+                }
+
+                int? usuarioAdminId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioAdminId == null)
+                    return RedirectToAction("Login", "Account");
+
+                var query = from e in _elOlivoDbContext.evento
+                            join es in _elOlivoDbContext.estado on e.estadoid equals es.estadoid
+                            where e.usuarioadminid == usuarioAdminId // Solo eventos del administrador
+                            select new
+                            {
+                                e.eventoid,
+                                e.nombre,
+                                e.descripcion,
+                                e.fecha_inicio,
+                                e.fecha_fin,
+                                EstadoId = e.estadoid,
+                                EstadoNombre = es.nombre
+                            };
+
+                // ------------Filtro de búsqueda------------
+                if (!string.IsNullOrEmpty(search))
+                {
+                    string searchLower = search.ToLower();
+                    query = query.Where(x => x.nombre.ToLower().Contains(searchLower));
+                }
+
+                var eventos = await query.ToListAsync();
+                return View(eventos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener eventos del administrador");
+                return Content(ex.ToString());
+            }
         }
 
         public IActionResult GestionAsistencias()
