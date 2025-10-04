@@ -1,10 +1,566 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
-	Layout = "_Layout_Usuario";
-}
-<h1>¡Hola de nuevo!</h1>
+﻿@* Views/Usuario/Dashboard.cshtml *@
+@model IEnumerable<dynamic>
 
-<p>Proximas sesiones...</p>
+@{
+    Layout = "_Layout_Usuario";
+    ViewData["Title"] = "Dashboard - Mis Sesiones";
+}
+
+<style>
+    /* Variables de colores */
+    :root {
+        --primary-color: #28a745;
+        --primary-dark: #218838;
+        --secondary-color: #6c757d;
+        --success-color: #28a745;
+        --warning-color: #ffc107;
+        --danger-color: #dc3545;
+        --info-color: #17a2b8;
+        --light-color: #f8f9fa;
+        --dark-color: #343a40;
+        --border-radius: 12px;
+        --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --transition: all 0.3s ease;
+    }
+
+    .page-title {
+        text-align: center;
+        color: #2d3748;
+        margin-bottom: 10px;
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #28a745, #17a2b8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .page-subtitle {
+        text-align: center;
+        color: #718096;
+        margin-bottom: 30px;
+        font-size: 1.1rem;
+    }
+
+    /* Filtros mejorados */
+    .filtros-card {
+        background: linear-gradient(135deg, #ffffff, #f7fafc);
+        border-radius: var(--border-radius);
+        padding: 25px;
+        box-shadow: var(--box-shadow);
+        max-width: 1400px;
+        margin: 20px auto;
+        border: 1px solid #e2e8f0;
+    }
+
+    .filtros-form {
+        display: flex;
+        gap: 20px;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+
+    .filtro-item {
+        flex: 1;
+        min-width: 300px;
+    }
+
+    .filtro-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #2d3748;
+        font-size: 0.95rem;
+    }
+
+    .busqueda-input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: var(--transition);
+        background: white;
+    }
+
+        .busqueda-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+        }
+
+    .botones-filtro {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: var(--transition);
+        font-size: 0.95rem;
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+    }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+    .btn-danger {
+        background: linear-gradient(135deg, #e53e3e, #c53030);
+        color: white;
+    }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+    /* Contenedor de eventos */
+    .evento-container {
+        background: linear-gradient(135deg, #ffffff, #f7fafc);
+        border-radius: var(--border-radius);
+        padding: 30px;
+        box-shadow: var(--box-shadow);
+        max-width: 1400px;
+        margin: 30px auto;
+        border: 1px solid #e2e8f0;
+        transition: var(--transition);
+    }
+
+        .evento-container:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+    .evento-header {
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 20px;
+        margin-bottom: 25px;
+    }
+
+    .evento-titulo {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+        .evento-titulo::before {
+            content: "📅";
+            font-size: 1.5rem;
+        }
+
+    .evento-descripcion {
+        color: #718096;
+        font-size: 1.1rem;
+        line-height: 1.6;
+        margin-bottom: 0;
+    }
+
+    /* Tarjetas de sesión */
+    .sesiones-grid {
+        display: grid;
+        gap: 25px;
+    }
+
+    .sesion-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 25px;
+        box-shadow: var(--box-shadow);
+        border-left: 6px solid var(--primary-color);
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+    }
+
+        .sesion-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--info-color));
+        }
+
+        .sesion-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+    .sesion-header {
+        display: flex;
+        justify-content: between;
+        align-items: flex-start;
+        margin-bottom: 20px;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .sesion-badges {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .badge-estado {
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .badge-confirmada {
+        background: linear-gradient(135deg, #48bb78, #38a169);
+    }
+
+    .badge-proceso {
+        background: linear-gradient(135deg, #ed8936, #dd6b20);
+    }
+
+    .badge-no-disponible {
+        background: linear-gradient(135deg, #a0aec0, #718096);
+    }
+
+    .fecha-hora {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .fecha-badge {
+        background: linear-gradient(135deg, var(--info-color), #2c5aa0);
+        color: white;
+        padding: 10px 18px;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: var(--transition);
+    }
+
+        .fecha-badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+        }
+
+    .sesion-titulo {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .sesion-titulo::before {
+            content: "🎯";
+            font-size: 1.2rem;
+        }
+
+    .sesion-descripcion {
+        color: #718096;
+        font-size: 1rem;
+        line-height: 1.6;
+        margin-bottom: 20px;
+        padding-left: 28px;
+    }
+
+    .sesion-info {
+        background: linear-gradient(135deg, #f7fafc, #edf2f7);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+    }
+
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+    .info-label {
+        font-weight: 600;
+        color: #2d3748;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .info-value {
+        color: #4a5568;
+        font-weight: 500;
+        background: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+    }
+
+    /* Estados vacíos */
+    .no-sesiones, .no-eventos {
+        text-align: center;
+        color: #a0aec0;
+        font-style: italic;
+        padding: 40px 20px;
+        font-size: 1.1rem;
+        background: linear-gradient(135deg, #f7fafc, #edf2f7);
+        border-radius: var(--border-radius);
+        border: 2px dashed #cbd5e0;
+    }
+
+        .no-sesiones::before, .no-eventos::before {
+            content: "📭";
+            font-size: 2rem;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .filtros-form {
+            flex-direction: column;
+        }
+
+        .filtro-item {
+            min-width: 100%;
+        }
+
+        .botones-filtro {
+            width: 100%;
+            justify-content: stretch;
+        }
+
+            .botones-filtro .btn {
+                flex: 1;
+            }
+
+        .sesion-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .evento-titulo {
+            font-size: 1.5rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+        }
+    }
+
+    /* Animaciones */
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .evento-container {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    .sesion-card {
+        animation: fadeIn 0.8s ease-out;
+    }
+</style>
+
+<h2 class="page-title">Mis Sesiones de Eventos</h2>
+<p class="page-subtitle">Gestiona y revisa todas tus sesiones programadas</p>
+
+<!-- Filtros -->
+<div class="filtros-card">
+    <form asp-action="Dashboard" method="get" class="filtros-form">
+        <div class="filtro-item">
+            <label class="filtro-label">Buscar sesiones</label>
+            <input type="text" name="search" placeholder="Escribe el nombre del evento o sesión..."
+                   value="@Context.Request.Query["search"]" class="busqueda-input" />
+        </div>
+        <div class="botones-filtro">
+            <button type="submit" class="btn btn-success">
+                <span> Buscar</span>
+            </button>
+            <button type="submit" class="btn btn-danger" name="limpiar" value="true">
+                <span> Limpiar</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+@if (Model == null || !Model.Any())
+{
+    <div class="evento-container">
+        <div class="no-eventos">No tienes sesiones programadas en eventos inscritos</div>
+    </div>
+}
+else
+{
+    foreach (var eventoGroup in Model)
+    {
+        <div class="evento-container">
+            <div class="evento-header">
+                <h1 class="evento-titulo">@eventoGroup.Evento.nombre</h1>
+                <p class="evento-descripcion">@eventoGroup.Evento.descripcion</p>
+            </div>
+
+            @if (eventoGroup.Sesiones != null && eventoGroup.Sesiones.Count > 0)
+            {
+                <div class="sesiones-grid">
+                    @foreach (var sesion in eventoGroup.Sesiones)
+                    {
+                        DateTime? fechaInicio = sesion.fecha_inicio;
+                        DateTime? fechaFin = sesion.fecha_fin;
+
+                        <div class="sesion-card">
+                            <div class="sesion-header">
+                                <div class="sesion-badges">
+                                    @{
+                                        var claseEstado = sesion.InscripcionEstado == "Confirmada" ? "badge-confirmada"
+                                        : sesion.InscripcionEstado == "En proceso" ? "badge-proceso"
+                                        : "badge-no-disponible";
+                                    }
+                                    <div class="badge-estado @claseEstado">@sesion.InscripcionEstado</div>
+
+                                    @if (fechaInicio != null)
+                                    {
+                                        <div class="fecha-hora">
+                                            <div class="fecha-badge">
+                                                <span></span>
+                                                @fechaInicio.Value.ToString("dd MMMM, yyyy", new System.Globalization.CultureInfo("es-ES"))
+                                            </div>
+                                            <div class="fecha-badge">
+                                                <span></span>
+                                                @fechaInicio.Value.ToString("h:mm tt", new System.Globalization.CultureInfo("es-ES"))
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <h2 class="sesion-titulo">@sesion.titulo</h2>
+                            <p class="sesion-descripcion">@sesion.descripcion</p>
+
+                            <div class="sesion-info">
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">
+                                            <span></span>
+                                            Tipo de Sesión:
+                                        </span>
+                                        <span class="info-value">@sesion.tipo_sesion</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">
+                                            <span></span>
+                                            Ubicación:
+                                        </span>
+                                        <span class="info-value">@sesion.ubicacion</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">
+                                            <span></span>
+                                            Duración:
+                                        </span>
+                                        <span class="info-value">
+                                            @if (fechaInicio != null && fechaFin != null)
+                                            {
+                                                var duracion = fechaFin.Value - fechaInicio.Value;
+                                                @($"{duracion.Hours}h {duracion.Minutes}m")
+                                            }
+                                            else
+                                            {
+                                                @("No especificada")
+                                            }
+                                        </span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">
+                                            <span></span>
+                                            Capacidad:
+                                        </span>
+                                        <span class="info-value">@sesion.capacidad participantes</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="no-sesiones">No hay sesiones programadas para este evento</div>
+            }
+        </div>
+    }
+}
+
+@section Scripts {
+    <script>F
+        // Efectos de hover mejorados
+        document.querySelectorAll('.sesion-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-3px)';
+            });
+
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Animación de carga suave
+        document.addEventListener('DOMContentLoaded', function() {
+            const containers = document.querySelectorAll('.evento-container');
+            containers.forEach((container, index) => {
+                container.style.animationDelay = `${index * 0.1}s`;
+            });
+        });
+    </script>
+}
 
