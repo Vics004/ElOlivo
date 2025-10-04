@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ElOlivo.Models;
+using ElOlivo.Servicios;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,12 @@ builder.Services.AddSession(options =>
 // Configura DbContext (si estás usando Entity Framework)
 builder.Services.AddDbContext<ElOlivoDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("ElOlivoConnection")));
+
+// Configurar Logging
+builder.Services.AddLogging();
+
+// Configurar Supabase Service
+builder.Services.AddSingleton<SupabaseService>();
 
 var app = builder.Build();
 

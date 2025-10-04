@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using ElOlivo.Servicios;
 using static ElOlivo.Servicios.AutenticationAttribute;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Text.RegularExpressions;
 
 namespace ElOlivo.Controllers
 {
@@ -12,11 +14,13 @@ namespace ElOlivo.Controllers
     public class UsuarioController : Controller
     {
         private readonly ILogger<UsuarioController> _logger;
+        private readonly SupabaseService _supabaseService;
         private readonly ElOlivoDbContext _elOlivoDbContext;
 
-        public UsuarioController(ILogger<UsuarioController> logger, ElOlivoDbContext elOlivoDbContext)
+        public UsuarioController(ILogger<UsuarioController> logger, SupabaseService supabaseService, ElOlivoDbContext elOlivoDbContext)
         {
             _elOlivoDbContext = elOlivoDbContext;
+            _supabaseService = supabaseService;
             _logger = logger;
         }
 
@@ -411,11 +415,372 @@ namespace ElOlivo.Controllers
 
 
 
+        [Autenticacion]
         public IActionResult MiPerfil()
         {
+            var usuarioId = HttpContext.Session.GetInt32("usuarioId");
 
+            var usuario = _elOlivoDbContext.usuario
+                .Where(u => u.usuarioid == usuarioId)
+                .Select(u => new
+                {
+                    u.usuarioid,
+                    u.nombre,
+                    u.apellido,
+                    u.email,
+                    u.telefono,
+                    u.institucion,
+                    u.pais,
+                    u.foto_url,
+                    u.fecha_registro,
+                    u.rolid
+                })
+                .FirstOrDefault();
+
+            if (usuario == null) return NotFound();
+
+            ViewBag.Usuario = usuario;
             return View();
         }
+
+        [HttpGet]
+        [Autenticacion]
+        public IActionResult EditarPerfil()
+        {
+            var usuarioId = HttpContext.Session.GetInt32("usuarioId");
+
+            var usuario = _elOlivoDbContext.usuario.Find(usuarioId);
+            if (usuario == null) return NotFound();
+
+            CargarListas();
+            return View(usuario);
+        }
+
+        [HttpPost]
+        [Autenticacion]
+        public async Task<IActionResult> EditarPerfil(usuario model, IFormFile archivoFoto)
+        {
+            _logger.LogInformation("Iniciando EditarPerfil POST");
+
+            // Ejecutar validaciones personalizadas
+            var errores = ValidarUsuario(model);
+            foreach (var error in errores)
+            {
+                ModelState.AddModelError(error.Key, error.Value);
+            }
+
+            // Remover la validación requerida para archivoFoto si no se subió un nuevo archivo
+            if (archivoFoto == null || archivoFoto.Length == 0)
+            {
+                ModelState.Remove("archivoFoto");
+            }
+
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var usuarioId = HttpContext.Session.GetInt32("usuarioId");
+                    _logger.LogInformation($"Usuario ID: {usuarioId}");
+
+                    var usuario = _elOlivoDbContext.usuario.Find(usuarioId);
+                    if (usuario == null)
+                    {
+                        _logger.LogWarning("Usuario no encontrado en la base de datos");
+                        return NotFound();
+                    }
+
+                    // Procesar archivo de foto solo si se subió uno nuevo
+                    if (archivoFoto != null && archivoFoto.Length > 0)
+                    {
+                        _logger.LogInformation($"Archivo recibido: {archivoFoto.FileName}, Tamaño: {archivoFoto.Length}");
+
+                        // Validar tipo de archivo
+                        var extensionesPermitidas = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+                        var extension = Path.GetExtension(archivoFoto.FileName).ToLowerInvariant();
+
+                        if (!extensionesPermitidas.Contains(extension))
+                        {
+                            _logger.LogWarning($"Tipo de archivo no permitido: {extension}");
+                            ModelState.AddModelError("archivoFoto", "Solo se permiten archivos JPG, JPEG, PNG o GIF");
+                            CargarListas();
+                            return View(model);
+                        }
+
+                        // Validar tamaño (máximo 5MB)
+                        if (archivoFoto.Length > 5 * 1024 * 1024)
+                        {
+                            _logger.LogWarning($"Archivo demasiado grande: {archivoFoto.Length} bytes");
+                            ModelState.AddModelError("archivoFoto", "El archivo no puede ser mayor a 5MB");
+                            CargarListas();
+                            return View(model);
+                        }
+
+                        // Eliminar foto anterior si existe
+                        if (!string.IsNullOrEmpty(usuario.foto_url))
+                        {
+                            _logger.LogInformation($"Eliminando foto anterior: {usuario.foto_url}");
+                            var nombreArchivoAnterior = ObtenerNombreArchivoDesdeUrl(usuario.foto_url);
+                            if (!string.IsNullOrEmpty(nombreArchivoAnterior))
+                            {
+                                await _supabaseService.EliminarArchivo(nombreArchivoAnterior);
+                            }
+                        }
+
+                        // Generar nombre único para el archivo
+                        var nombreArchivo = _supabaseService.GenerarNombreArchivo(usuarioId.Value, extension);
+                        _logger.LogInformation($"Nombre de archivo generado: {nombreArchivo}");
+
+                        // Subir archivo a Supabase
+                        var urlFoto = await _supabaseService.SubirArchivo(archivoFoto, nombreArchivo);
+
+                        if (!string.IsNullOrEmpty(urlFoto))
+                        {
+                            _logger.LogInformation($"Foto subida exitosamente. URL: {urlFoto}");
+                            usuario.foto_url = urlFoto;
+                        }
+                        else
+                        {
+                            _logger.LogError("La subida de la foto retornó una URL nula o vacía");
+                            ModelState.AddModelError("archivoFoto", "Error al subir la imagen");
+                            CargarListas();
+                            return View(model);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogInformation("No se recibió archivo de foto - manteniendo foto actual");
+                        // IMPORTANTE: No actualizar foto_url si no se subió nueva foto
+                        // Dejar la foto_url actual del usuario como está
+                        // NO hacer: usuario.foto_url = model.foto_url;
+                        _logger.LogInformation($"Manteniendo foto actual: {usuario.foto_url}");
+                    }
+
+                    // Actualizar solo los campos editables (excepto foto_url si no hay nueva imagen)
+                    usuario.nombre = model.nombre;
+                    usuario.apellido = model.apellido;
+                    usuario.email = model.email;
+                    usuario.telefono = model.telefono;
+                    usuario.institucion = model.institucion;
+                    usuario.pais = model.pais;
+
+                    _logger.LogInformation("Guardando cambios en la base de datos...");
+                    _elOlivoDbContext.SaveChanges();
+                    _logger.LogInformation("Cambios guardados exitosamente");
+
+                    // Actualizar datos en sesión
+                    HttpContext.Session.SetString("nombre", usuario.nombre ?? "");
+                    HttpContext.Session.SetString("email", usuario.email ?? "");
+
+                    TempData["SuccessMessage"] = "Perfil actualizado correctamente";
+                    return RedirectToAction("MiPerfil");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al actualizar el perfil");
+                    ModelState.AddModelError("", "Error al actualizar el perfil: " + ex.Message);
+                }
+            }
+            else
+            {
+                _logger.LogWarning("ModelState no es válido");
+                foreach (var error in ModelState)
+                {
+                    _logger.LogWarning($"Error en {error.Key}: {string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage))}");
+                }
+            }
+
+            CargarListas();
+            return View(model);
+        }
+
+        [HttpPost]
+        [Autenticacion]
+        public async Task<IActionResult> EliminarFoto()
+        {
+            try
+            {
+                var usuarioId = HttpContext.Session.GetInt32("usuarioId");
+                var usuario = _elOlivoDbContext.usuario.Find(usuarioId);
+
+                if (usuario == null) return NotFound();
+
+                if (!string.IsNullOrEmpty(usuario.foto_url))
+                {
+                    var nombreArchivo = ObtenerNombreArchivoDesdeUrl(usuario.foto_url);
+                    if (!string.IsNullOrEmpty(nombreArchivo))
+                    {
+                        await _supabaseService.EliminarArchivo(nombreArchivo);
+                    }
+
+                    usuario.foto_url = null;
+                    _elOlivoDbContext.SaveChanges();
+
+                    TempData["SuccessMessage"] = "Foto de perfil eliminada correctamente";
+                }
+
+                return RedirectToAction("EditarPerfil");
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Error al eliminar la foto: " + ex.Message;
+                return RedirectToAction("EditarPerfil");
+            }
+        }
+
+        [HttpGet]
+        [Autenticacion]
+        public IActionResult CambiarContrasena()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [Autenticacion]
+        public IActionResult CambiarContrasena(string contrasenaActual, string nuevaContrasena, string confirmarContrasena)
+        {
+            if (string.IsNullOrEmpty(nuevaContrasena) || nuevaContrasena != confirmarContrasena)
+            {
+                ModelState.AddModelError("", "Las contraseñas no coinciden");
+                return View();
+            }
+
+            var usuarioId = HttpContext.Session.GetInt32("usuarioId");
+
+            var usuario = _elOlivoDbContext.usuario.Find(usuarioId);
+            if (usuario == null) return NotFound();
+
+            // Verificar contraseña actual (en producción usa hashing)
+            if (usuario.contrasena != contrasenaActual)
+            {
+                ModelState.AddModelError("", "La contraseña actual es incorrecta");
+                return View();
+            }
+
+            // Actualizar contraseña (en producción usa hashing)
+            usuario.contrasena = nuevaContrasena;
+            _elOlivoDbContext.SaveChanges();
+
+            TempData["SuccessMessage"] = "Contraseña actualizada correctamente";
+            return RedirectToAction("MiPerfil");
+        }
+
+        private string ObtenerNombreArchivoDesdeUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return null;
+
+            try
+            {
+                var uri = new Uri(url);
+                return Path.GetFileName(uri.LocalPath);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        //Validaciones
+        private Dictionary<string, string> ValidarUsuario(usuario usuario)
+        {
+            var errores = new Dictionary<string, string>();
+
+            // Validar nombre (solo letras y espacios)
+            if (!string.IsNullOrEmpty(usuario.nombre))
+            {
+                if (!Regex.IsMatch(usuario.nombre, @"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"))
+                {
+                    errores.Add("nombre", "El nombre solo puede contener letras y espacios");
+                }
+                else if (usuario.nombre.Length > 50)
+                {
+                    errores.Add("nombre", "El nombre no puede exceder 50 caracteres");
+                }
+            }
+
+            // Validar apellido (solo letras y espacios)
+            if (!string.IsNullOrEmpty(usuario.apellido))
+            {
+                if (!Regex.IsMatch(usuario.apellido, @"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"))
+                {
+                    errores.Add("apellido", "El apellido solo puede contener letras y espacios");
+                }
+                else if (usuario.apellido.Length > 50)
+                {
+                    errores.Add("apellido", "El apellido no puede exceder 50 caracteres");
+                }
+            }
+
+            // Validar email (formato básico)
+            if (!string.IsNullOrEmpty(usuario.email))
+            {
+                if (!usuario.email.Contains("@") || !usuario.email.Contains("."))
+                {
+                    errores.Add("email", "El formato del email no es válido");
+                }
+                else if (usuario.email.Length > 100)
+                {
+                    errores.Add("email", "El email no puede exceder 100 caracteres");
+                }
+            }
+
+            // Validar contraseña (mínimo 6 caracteres)
+            if (!string.IsNullOrEmpty(usuario.contrasena))
+            {
+                if (usuario.contrasena.Length < 6)
+                {
+                    errores.Add("contrasena", "La contraseña debe tener al menos 6 caracteres");
+                }
+                else if (usuario.contrasena.Length > 100)
+                {
+                    errores.Add("contrasena", "La contraseña no puede exceder 100 caracteres");
+                }
+            }
+
+            // Validar país(obligatorio)
+            if (string.IsNullOrEmpty(usuario.pais))
+            {
+                errores.Add("pais", "Debe seleccionar un país");
+            }
+
+            // Validar teléfono (formato XXXX-XXXX)
+            if (!string.IsNullOrEmpty(usuario.telefono))
+            {
+                if (!Regex.IsMatch(usuario.telefono, @"^\d{4}-\d{4}$"))
+                {
+                    errores.Add("telefono", "El formato del teléfono debe ser XXXX-XXXX");
+                }
+            }
+
+            // Validar institución (longitud máxima)
+            if (!string.IsNullOrEmpty(usuario.institucion) && usuario.institucion.Length > 100)
+            {
+                errores.Add("institucion", "La institución no puede exceder 100 caracteres");
+            }
+
+            return errores;
+        }
+
+        //lista de paises
+        private void CargarListas()
+        {
+            var paises = new List<SelectListItem>
+            {
+                new SelectListItem { Value = "", Text = "Seleccione un país", Selected = true },
+                new SelectListItem { Value = "México", Text = "México" },
+                new SelectListItem { Value = "España", Text = "España" },
+                new SelectListItem { Value = "Argentina", Text = "Argentina" },
+                new SelectListItem { Value = "Colombia", Text = "Colombia" },
+                new SelectListItem { Value = "Chile", Text = "Chile" },
+                new SelectListItem { Value = "Perú", Text = "Perú" },
+                new SelectListItem { Value = "Estados Unidos", Text = "Estados Unidos" },
+                new SelectListItem { Value = "El Salvador", Text = "El Salvador" }
+            };
+
+            ViewBag.Paises = paises;
+        }
+
+
+
         public IActionResult AcercaDe()
         {
 
