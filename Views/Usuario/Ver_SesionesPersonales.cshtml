@@ -4,20 +4,13 @@
 @{
 
     Layout = "_Layout_Usuario";
-    var tipousuario = Context.Session.GetString("tipoUsuario");
+    //obtener el rol del usuario
+    
 }
 <!-- FullCalendar CSS -->
 
-<h3>Agenda de Eventos Disponibles</h3>
-
-@if (tipousuario != "Administrador")
-{
-    <div>
-        <a asp-action="Ver_SesionesPersonales" class="btn btn-primary">Ver Agenda personal</a>
-    </div>
-}
-
-
+<h3>Agenda Personal de Eventos</h3>
+<a asp-action="Ver_Sesiones" class="btn btn-primary">Ver agenda de eventos disponibles</a>
 
 <!-- Contenedor del calendario -->
 <div id="calendar"></div>
@@ -56,7 +49,7 @@
                 list: 'Lista'
             },
 
-            events: '/Usuario/GetEventosPersonal',
+            events: '/Usuario/GetEventos',
 
             eventClick: function (info) {
                 info.jsEvent.preventDefault();

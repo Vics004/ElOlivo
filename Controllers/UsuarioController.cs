@@ -8,6 +8,8 @@ using static ElOlivo.Servicios.AutenticationAttribute;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Text.RegularExpressions;
 
+
+
 namespace ElOlivo.Controllers
 {
     [Autenticacion]   
@@ -167,8 +169,72 @@ namespace ElOlivo.Controllers
         public IActionResult Ver_Sesiones()
         {
 
+
+
             return View();
         }
+        public IActionResult Ver_SesionesPersonales()
+        {
+
+
+
+            return View();
+        }
+
+        public ActionResult GetEventos()
+        {
+            //Obtener los id de eventoid en los que el usuario está inscrito
+
+            var eventoid = (from i in _elOlivoDbContext.inscripcion
+                            where i.usuarioid == HttpContext.Session.GetInt32("usuarioId")
+                            select i.eventoid).ToList();
+
+            //Obtener las sesiones de los eventos en los que el usuario está inscrito
+            var sesiones = (from s in _elOlivoDbContext.sesion
+                            where eventoid.Contains(s.eventoid) && s.activo == true
+                            select s).ToList();
+            //var sesiones =(from sesion in _elOlivoDbContext.sesion
+            // where sesion.
+            // select sesion).ToList();
+
+            var data = sesiones.Select(e => new
+            {
+                id = e.sesionid,
+                title = e.titulo,
+                start = e.fecha_inicio.HasValue
+                    ? e.fecha_inicio.Value.ToString("yyyy-MM-ddTHH:mm:ss")
+                    : null,
+                end = e.fecha_fin.HasValue
+                    ? e.fecha_fin.Value.ToString("yyyy-MM-ddTHH:mm:ss")
+                    : null,
+                color = "#007bff",
+                allDay= false
+            });
+
+            return Json(data);
+        }
+
+        public ActionResult GetEventosPersonal()
+        {
+            var sesiones = _elOlivoDbContext.sesion.ToList();
+
+            var data = sesiones.Select(e => new
+            {
+                id = e.sesionid,
+                title = e.titulo,
+                start = e.fecha_inicio.HasValue
+                    ? e.fecha_inicio.Value.ToString("yyyy-MM-ddTHH:mm:ss")
+                    : null,
+                end = e.fecha_fin.HasValue
+                    ? e.fecha_fin.Value.ToString("yyyy-MM-ddTHH:mm:ss")
+                    : null,
+                color = "#007bff",
+                allDay = false
+            });
+
+            return Json(data);
+        }
+
 
 
 
