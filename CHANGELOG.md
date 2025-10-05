@@ -55,3 +55,13 @@ Descripción: Desarrollo de la característica “menu lateral del administrador
 
 Impacto: Implementación importante para que el administrador de eventos pueda comenzar próximamente a crear eventos y gestionarlos desde el sitio web.
 
+[0.1.5] – 04/10/2025
+
+Versión: 0.1.5 
+
+Fecha: 04/10/2025
+
+Descripción: Desarrollo de las vistas iniciales del sistema tanto del menú de usuario como de administrador de eventos; se agregó parte del flujo de inscripción y el flujo de Mi Perfil, en donde el usuario podrá ver su información con las opciones de cambiar contraseña y editar su información personal, incluyendo agregar una foto de perfil, además, se implementó el servicio de Storage que ofrece Supabase para alojar archivos como imagenes.
+
+Impacto: Ahora el usuario puede acceder a la primera vista de cada menú, permitiendo así, que pueda ver la información inicial como sus sesiones, eventos, inscripciones, certificados y su información personal. Del lado del administrador de eventos ya se han dejado las vistas para proximamente gestionar los eventos que haya creado.
+
