@@ -302,6 +302,27 @@ namespace ElOlivo.Controllers
             return View();
         }
 
+        public ActionResult GetEventos()
+        {
+            var sesiones = _elOlivoDbContext.sesion.ToList();
+
+            var data = sesiones.Select(e => new
+            {
+                id = e.sesionid,
+                title = e.titulo,
+                start = e.fecha_inicio.HasValue
+                    ? e.fecha_inicio.Value.ToString("yyyy-MM-ddTHH:mm:ss")
+                    : null,
+                end = e.fecha_fin.HasValue
+                    ? e.fecha_fin.Value.ToString("yyyy-MM-ddTHH:mm:ss")
+                    : null,
+                color = "#007bff",
+                allDay = false
+            });
+
+            return Json(data);
+        }
+
         public async Task<IActionResult> GestionInscripciones(string? search)
         {
             try
