@@ -1,0 +1,253 @@
+﻿@model ElOlivo.Models.usuario
+
+@{
+    ViewData["Title"] = "Registro";
+}
+
+<div class="container d-flex justify-content-center align-items-center vh-100">
+    <div class="text-center">
+
+        <h1 style="color: #28a745; font-weight: bold; font-size: 4rem;" class="mb-5">El Olivo</h1>
+
+        <div class="w-100" style="max-width: 500px;">
+            <div class="p-4 border rounded" style="border-color: #b3cde0; background-color: #f8f9fa;">
+                <h3 style="color: #004080; font-weight: bold;" class="mb-4">Crear Cuenta</h3>
+
+                <form asp-action="Crear" method="post" class="mt-2" id="formRegistro">
+                    @Html.AntiForgeryToken()
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="nombre" class="d-block fw-bold text-start" style="color: #004080;">Nombre *</label>
+                                <input type="text" id="nombre" name="nombre"
+                                       class="form-control"
+                                       style="border-color: #a7c7e7;"
+                                       placeholder="Ingresa tu nombre"
+                                       onkeypress="return soloLetras(event)"
+                                       maxlength="50"
+                                       value="@Model?.nombre"
+                                       required />
+                                <span class="text-danger small d-block text-start" id="errorNombre">
+                                    @Html.ValidationMessageFor(m => m.nombre)
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="apellido" class="d-block fw-bold text-start" style="color: #004080;">Apellido *</label>
+                                <input type="text" id="apellido" name="apellido"
+                                       class="form-control"
+                                       style="border-color: #a7c7e7;"
+                                       placeholder="Ingresa tu apellido"
+                                       onkeypress="return soloLetras(event)"
+                                       maxlength="50"
+                                       value="@Model?.apellido"
+                                       required />
+                                <span class="text-danger small d-block text-start" id="errorApellido">
+                                    @Html.ValidationMessageFor(m => m.apellido)
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label for="email" class="d-block fw-bold text-start" style="color: #004080;">Email *</label>
+                        <input type="email" id="email" name="email"
+                               class="form-control"
+                               style="border-color: #a7c7e7;"
+                               placeholder="correo@ejemplo.com"
+                               maxlength="100"
+                               value="@Model?.email"
+                               required />
+                        <span class="text-danger small d-block text-start" id="errorEmail">
+                            @Html.ValidationMessageFor(m => m.email)
+                        </span>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label for="contrasena" class="d-block fw-bold text-start" style="color: #004080;">Contraseña *</label>
+                        <input type="password" id="contrasena" name="contrasena"
+                               class="form-control"
+                               style="border-color: #a7c7e7;"
+                               placeholder="Mínimo 6 caracteres"
+                               minlength="6"
+                               maxlength="100"
+                               required />
+                        <span class="text-danger small d-block text-start" id="errorContrasena">
+                            @Html.ValidationMessageFor(m => m.contrasena)
+                        </span>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label for="telefono" class="d-block fw-bold text-start" style="color: #004080;">Teléfono</label>
+                        <input type="text" id="telefono" name="telefono"
+                               class="form-control"
+                               style="border-color: #a7c7e7;"
+                               placeholder="XXXX-XXXX"
+                               onkeypress="return formatoTelefono(event)"
+                               maxlength="9"
+                               value="@Model?.telefono" />
+                        <span class="text-danger small d-block text-start" id="errorTelefono">
+                            @Html.ValidationMessageFor(m => m.telefono)
+                        </span>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label for="institucion" class="d-block fw-bold text-start" style="color: #004080;">Institución</label>
+                        <input type="text" id="institucion" name="institucion"
+                               class="form-control"
+                               style="border-color: #a7c7e7;"
+                               placeholder="Nombre de la institución"
+                               maxlength="100"
+                               value="@Model?.institucion" />
+                        <span class="text-danger small d-block text-start" id="errorInstitucion">
+                            @Html.ValidationMessageFor(m => m.institucion)
+                        </span>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label for="pais" class="d-block fw-bold text-start" style="color: #004080;">País *</label>
+                        <select id="pais" name="pais" class="form-select" style="border-color: #a7c7e7;" required>
+                            <option value="">Seleccione un país</option>
+                            @foreach (var pais in ViewBag.Paises)
+                            {
+                                if (pais.Value != "") // Excluir la opción vacía que ya está arriba
+                                {
+                                    <option value="@pais.Value" selected="@(Model?.pais == pais.Value ? "selected" : null)">
+                                        @pais.Text
+                                    </option>
+                                }
+                            }
+                        </select>
+                        <span class="text-danger small d-block text-start" id="errorPais">
+                            @Html.ValidationMessageFor(m => m.pais)
+                        </span>
+                    </div>
+
+                    <button type="submit"
+                            class="btn btn-lg mt-4"
+                            style="background-color: #28a745; color: white; width: 100%; border: none;"
+                            id="btnRegistrar">
+                        Registrarse
+                    </button>
+                </form>
+            </div>
+
+            <div class="mt-3">
+                <span style="color: gray;">¿Ya tienes una cuenta?</span>
+                <a href="@Url.Action("Index", "Login")" style="color: #28a745; font-weight: bold; cursor: pointer; text-decoration: none;">
+                    Inicia sesión aquí
+                </a>
+            </div>
+        </div>
+
+        @if (!ViewData.ModelState.IsValid && ViewData.ModelState.ErrorCount > 0)
+        {
+            <div class="alert alert-danger mt-3" style="background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;">
+                Por favor, corrige los errores en el formulario.
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Función para solo permitir letras y espacios
+        function soloLetras(event) {
+            var charCode = event.which ? event.which : event.keyCode;
+            var charStr = String.fromCharCode(charCode);
+
+            // Permitir letras, espacios, y caracteres especiales del español
+            var regex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]$/;
+
+            if (!regex.test(charStr)) {
+                event.preventDefault();
+                return false;
+            }
+            return true;
+        }
+
+        // Función para formato de teléfono XXXX-XXXX
+        function formatoTelefono(event) {
+            var charCode = event.which ? event.which : event.keyCode;
+            var charStr = String.fromCharCode(charCode);
+            var currentValue = event.target.value;
+
+            // Solo permitir números
+            if (charCode < 48 || charCode > 57) {
+                event.preventDefault();
+                return false;
+            }
+
+            // Auto-insertar el guión después de 4 dígitos
+            if (currentValue.length === 4 && charCode !== 8) { // 8 es backspace
+                event.target.value = currentValue + '-';
+            }
+
+            return true;
+        }
+
+        // Validación en tiempo real del formato de teléfono
+        document.addEventListener('DOMContentLoaded', function () {
+            const telefonoInput = document.getElementById('telefono');
+
+            if (telefonoInput) {
+                telefonoInput.addEventListener('input', function (e) {
+                    let value = e.target.value.replace(/\D/g, '');
+
+                    if (value.length > 4) {
+                        value = value.substring(0, 4) + '-' + value.substring(4, 8);
+                    }
+
+                    e.target.value = value;
+                });
+            }
+
+            // Validación adicional antes del envío
+            const form = document.getElementById('formRegistro');
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    let isValid = true;
+
+                    // Validar nombre
+                    const nombre = document.getElementById('nombre').value;
+                    if (nombre && !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre)) {
+                        document.getElementById('errorNombre').textContent = 'El nombre solo puede contener letras y espacios';
+                        isValid = false;
+                    }
+
+                    // Validar apellido
+                    const apellido = document.getElementById('apellido').value;
+                    if (apellido && !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(apellido)) {
+                        document.getElementById('errorApellido').textContent = 'El apellido solo puede contener letras y espacios';
+                        isValid = false;
+                    }
+
+                    // Validar teléfono
+                    const telefono = document.getElementById('telefono').value;
+                    if (telefono && telefono !== '') {
+                        const telefonoRegex = /^\d{4}-\d{4}$/;
+                        if (!telefonoRegex.test(telefono)) {
+                            document.getElementById('errorTelefono').textContent = 'El formato del teléfono debe ser XXXX-XXXX';
+                            isValid = false;
+                        }
+                    }
+
+                    // Validar contraseña
+                    const contrasena = document.getElementById('contrasena').value;
+                    if (contrasena.length < 6) {
+                        document.getElementById('errorContrasena').textContent = 'La contraseña debe tener al menos 6 caracteres';
+                        isValid = false;
+                    }
+
+                    if (!isValid) {
+                        e.preventDefault();
+                    }
+
+                    return isValid;
+                });
+            }
+        });
+    </script>
+}

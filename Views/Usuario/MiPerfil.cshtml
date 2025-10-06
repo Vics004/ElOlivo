@@ -1,0 +1,309 @@
+﻿@using Microsoft.AspNetCore.Http
+@{
+    Layout = "_Layout_Usuario";
+
+    ViewData["Title"] = "Mi Perfil";
+    var usuario = ViewBag.Usuario;
+}
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Sidebar con información del usuario -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center p-4">
+                    <!-- Foto de perfil -->
+                    <div class="avatar-section mb-4">
+                        @if (!string.IsNullOrEmpty(usuario.foto_url))
+                        {
+                            <img src="@usuario.foto_url" alt="Foto de perfil"
+                                 class="rounded-circle img-fluid"
+                                 style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #e9ecef;">
+                        }
+                        else
+                        {
+                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto"
+                                 style="width: 150px; height: 150px; border: 4px solid #e9ecef;">
+                                <i class="fas fa-user fa-4x text-muted"></i>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Información básica -->
+                    <h4 class="mb-1">@usuario.nombre @usuario.apellido</h4>
+                    <p class="text-muted mb-3">@usuario.email</p>
+
+                    <!-- Botón editar perfil -->
+                    <a href="@Url.Action("EditarPerfil")" class="btn btn-primary btn-lg w-100 mb-3">
+                        <i class="fas fa-edit me-2"></i>
+                        Editar Perfil
+                    </a>
+                </div>
+            </div>
+
+            <!-- Tarjeta de seguridad -->
+            <div class="card shadow-sm border-0 mt-4">
+                <div class="card-body text-center p-4">
+                    <div class="security-icon mb-3">
+                        <i class="fas fa-shield-alt fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title">Seguridad</h5>
+                    <p class="card-text text-muted small">
+                        Mantén tu cuenta segura actualizando tu contraseña regularmente
+                    </p>
+                    <a href="@Url.Action("CambiarContrasena")" class="btn btn-outline-warning btn-sm">
+                        <i class="fas fa-key me-1"></i>
+                        Cambiar Contraseña
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenido principal - Información detallada -->
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    @if (TempData["SuccessMessage"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            @TempData["SuccessMessage"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <!-- Sección de información personal -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h5 class="section-title mb-4">
+                                <i class="fas fa-id-card me-2 text-success"></i>
+                                Información Personal
+                            </h5>
+                        </div>
+                    </div>
+
+                    <div class="col">
+                        <!-- Nombre completo -->
+                        <div class="col-12">
+                            <div class="info-card">
+                                <div class="info-icon">
+                                    <i class="fas fa-user text-success"></i>
+                                </div>
+                                <div class="info-content">
+                                    <label class="info-label">Nombre completo</label>
+                                    <p class="info-value">@usuario.nombre @usuario.apellido</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Correo electrónico -->
+                        <div class="col-12">
+                            <div class="info-card">
+                                <div class="info-icon">
+                                    <i class="fas fa-envelope text-success"></i>
+                                </div>
+                                <div class="info-content">
+                                    <label class="info-label">Correo electrónico</label>
+                                    <p class="info-value">@usuario.email</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Teléfono -->
+                        <div class="col-12">
+                            <div class="info-card">
+                                <div class="info-icon">
+                                    <i class="fas fa-phone text-success"></i>
+                                </div>
+                                <div class="info-content">
+                                    <label class="info-label">Teléfono</label>
+                                    <p class="info-value">
+                                        @if (!string.IsNullOrEmpty(usuario.telefono))
+                                        {
+                                            @usuario.telefono
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No especificado</span>
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- País -->
+                        <div class="col-12">
+                            <div class="info-card">
+                                <div class="info-icon">
+                                    <i class="fas fa-globe text-success"></i>
+                                </div>
+                                <div class="info-content">
+                                    <label class="info-label">País</label>
+                                    <p class="info-value">
+                                        @if (!string.IsNullOrEmpty(usuario.pais))
+                                        {
+                                            @usuario.pais
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No especificado</span>
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Institución -->
+                        <div class="col-12">
+                            <div class="info-card">
+                                <div class="info-icon">
+                                    <i class="fas fa-university text-success"></i>
+                                </div>
+                                <div class="info-content">
+                                    <label class="info-label">Institución</label>
+                                    <p class="info-value">
+                                        @if (!string.IsNullOrEmpty(usuario.institucion))
+                                        {
+                                            @usuario.institucion
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No especificado</span>
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <!-- Fecha de registro -->
+                        <div class="col-12">
+                            <div class="info-card">
+                                <div class="info-icon">
+                                    <i class="fas fa-calendar-alt text-success"></i>
+                                </div>
+                                <div class="info-content">
+                                    <label class="info-label">Fecha de registro</label>
+                                    <p class="info-value">@usuario.fecha_registro?.ToString("dd/MM/yyyy")</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 12px;
+        transition: transform 0.2s ease-in-out;
+    }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+    .avatar-section {
+        position: relative;
+    }
+
+    .info-card {
+        display: flex;
+        align-items: flex-start;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+    }
+
+        .info-card:hover {
+            background: #fff;
+            border-color: #198754;
+            box-shadow: 0 4px 12px rgba(25, 135, 84, 0.1);
+        }
+
+    .info-icon {
+        width: 50px;
+        height: 50px;
+        background: white;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        border: 2px solid #e9ecef;
+    }
+
+        .info-icon i {
+            font-size: 1.2rem;
+        }
+
+    .info-content {
+        flex: 1;
+    }
+
+    .info-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .info-value {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #212529;
+        margin-bottom: 0;
+    }
+
+    .section-title {
+        color: #2c3e50;
+        font-weight: 600;
+        border-bottom: 2px solid #198754;
+        padding-bottom: 0.5rem;
+        display: inline-block;
+    }
+
+    .user-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+
+    .security-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #198754, #146c43);
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+    }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #146c43, #0f5132);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
+        }
+
+    .btn-outline-warning {
+        border-radius: 6px;
+        font-weight: 500;
+    }
+</style>

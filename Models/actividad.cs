@@ -8,7 +8,7 @@ namespace ElOlivo.Models
         public int agendaid { get; set; }
         public string? nombre { get; set; }
         public string? descripcion { get; set; }
-        public string? ponente { get; set; }
+        public int ponenteid { get; set; }
         public bool? activo { get; set; }
         public DateTime? hora_inicio { get; set; }
         public DateTime? hora_fin { get; set; }

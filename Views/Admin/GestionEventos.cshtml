@@ -1,0 +1,78 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    Layout = "_Layout_Admin";
+}
+<h4>Gestión de Eventos</h4>
+
+
+<!-- FullCalendar CSS -->
+
+
+
+
+
+<!-- Contenedor del calendario -->
+<div id="calendar"></div>
+
+<!-- FullCalendar CSS -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
+
+<!-- FullCalendar JS -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/locales/es.global.min.js"></script>
+
+<!-- Script para inicializar el calendario -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var calendarEl = document.getElementById('calendar');
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'es',
+            timeZone: 'local',
+            height: 'auto',
+            eventDisplay: 'block', // 🔹 Hace visibles los colores de fondo
+            eventColor: '#007bff', // color por defecto si no hay uno en BD
+
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+            },
+
+            buttonText: { // 🔹 Traducción manual
+                today: 'Hoy',
+                month: 'Mes',
+                week: 'Semana',
+                day: 'Día',
+                list: 'Lista'
+            },
+
+            events: '/Admin/GetEventos',
+
+            eventClick: function (info) {
+                info.jsEvent.preventDefault();
+                alert(
+                    '📅 Evento: ' + info.event.title +
+                    '\nInicio: ' + info.event.start.toLocaleString() +
+                    '\nFin: ' + (info.event.end ? info.event.end.toLocaleString() : 'Sin fecha de fin')
+                );
+            }
+        });
+
+        calendar.render();
+    });
+</script>
+
+<style>
+    #calendar {
+        max-width: 900px;
+        margin: 40px auto;
+        background: #fff;
+        border-radius: 12px;
+        padding: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+</style>
