@@ -113,7 +113,9 @@ else
                 <div class="evento-item">
                     <span class="evento-item-label">Acciones</span>
                     <div class="evento-acciones">
-                        <button type="button" class="btn btn-success">Ver más</button>
+                        <a asp-action="Ver_Mas" asp-route-id="@inscripcion.eventoid" class="btn btn-success btn-sm">
+                            Ver más
+                        </a>
                         <button type="button" class="btn btn-primary">Comprobante</button>
                         @if (inscripcion.EstadoId != 1)
                         {

@@ -1,7 +1,162 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@* Views/Usuario/Certificados.cshtml *@
+<link rel="stylesheet" href="~/css/Tablas.css" />
+
+@model IEnumerable<dynamic>
+
 @{
     Layout = "_Layout_Usuario";
+    ViewData["Title"] = "Mis Certificados";
 }
-<h3>Certificados</h3>
+
+<h2 class="page-title">Mis Certificados</h2>
+
+<!-- Filtros -->
+<div class="filtros-card">
+    <form asp-action="Certificados" method="get" class="filtros-form">
+        <div class="filtros-grid">
+            <!-- Buscar -->
+            <div class="filtro-item">
+                <label class="filtro-label">Buscar certificado</label>
+                <input type="text" name="search" placeholder="Código, evento o sesión..."
+                       value="@Context.Request.Query["search"]" class="busqueda-input" />
+            </div>
+
+            <!-- Estado -->
+            <div class="filtro-item">
+                <label class="filtro-label">Estado</label>
+                <select name="estado" class="busqueda-input">
+                    <option value="">-- Estado --</option>
+                    <option value="7" selected="@(Context.Request.Query["estado"] == "7")">En proceso</option>
+                    <option value="8" selected="@(Context.Request.Query["estado"] == "8")">Emitido</option>
+                    <option value="9" selected="@(Context.Request.Query["estado"] == "9")">Cancelado</option>
+                </select>
+            </div>
+
+            <!-- Fecha emisión inicio -->
+            <div class="filtro-item">
+                <label class="filtro-label">Fecha desde</label>
+                <input type="date" name="fechaInicio"
+                       value="@Context.Request.Query["fechaInicio"]" class="busqueda-input" />
+            </div>
+
+            <!-- Fecha emisión fin -->
+            <div class="filtro-item">
+                <label class="filtro-label">Fecha hasta</label>
+                <input type="date" name="fechaFin"
+                       value="@Context.Request.Query["fechaFin"]" class="busqueda-input" />
+            </div>
+
+            <!-- Botones -->
+            <div class="botones-filtro">
+                <button type="submit" class="btn btn-success">Buscar</button>
+                <button type="submit" class="btn btn-danger" name="limpiar" value="true">Limpiar</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@if (Model == null || !Model.Any())
+{
+    <div class="alert alert-info">No tienes certificados registrados.</div>
+}
+else
+{
+    <div class="eventos-container">
+        <!-- Encabezado -->
+        <div class="eventos-header">
+            <div class="eventos-header-item">Código Único</div>
+            <div class="eventos-header-item">Evento</div>
+            <div class="eventos-header-item">Sesión</div>
+            <div class="eventos-header-item">Fecha Emisión</div>
+            <div class="eventos-header-item">Estado</div>
+            <div class="eventos-header-item">Acciones</div>
+        </div>
+
+        <!-- Tarjetas de Certificados -->
+        @foreach (var certificado in Model)
+        {
+            <div class="evento-card">
+                <!-- Código Único -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Código Único</span>
+                    <span class="evento-item-value evento-nombre">@certificado.codigo_unico</span>
+                </div>
+
+                <!-- Evento -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Evento</span>
+                    <span class="evento-item-value evento-descripcion">@certificado.EventoNombre</span>
+                </div>
+
+                <!-- Sesión -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Sesión</span>
+                    <span class="evento-item-value">@certificado.SesionTitulo</span>
+                </div>
+
+                <!-- Fecha Emisión -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Fecha Emisión</span>
+                    <span class="evento-item-value">
+                        @if (certificado.FechaEmision != null)
+                        {
+                            @certificado.FechaEmision.ToString("dd/MM/yyyy")
+                        }
+                        else
+                        {
+                            <span class="text-muted">No emitido</span>
+                        }
+                    </span>
+                </div>
+
+                <!-- Estado -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Estado</span>
+                    <span class="estado-badge
+                        @(certificado.EstadoId == 7 ? "estado-proceso" :
+                          certificado.EstadoId == 8 ? "estado-emitido" : "estado-cancelado")">
+                        @certificado.EstadoNombre
+                    </span>
+                </div>
+
+                <!-- Acciones -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Acciones</span>
+                    <div class="evento-acciones">
+                        <button type="button" class="btn btn-success">Detalles del Evento</button>
+                        <button type="button" class="btn btn-primary">Descargar</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<style>
+    .estado-proceso {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+    .estado-emitido {
+        background-color: #d1edff;
+        color: #004085;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+    .estado-cancelado {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+
+</style>
+
