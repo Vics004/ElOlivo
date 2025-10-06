@@ -1,7 +1,102 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@* Views/AdminEventos/GestionInscripciones.cshtml *@
+<link rel="stylesheet" href="~/css/Tablas.css" />
+
+@model IEnumerable<dynamic>
+
 @{
     Layout = "_Layout_Admin";
+    ViewData["Title"] = "Gestión de Inscripciones";
 }
-<h4>Gestión de Inscripciones</h4>
+
+<h2 class="page-title">Gestión de Inscripciones y Asistencia</h2>
+
+<!-- Filtros -->
+<div class="filtros-card">
+    <form asp-action="GestionInscripciones" method="get" class="filtros-form">
+        <div class="filtros-grid">
+            <!-- Buscar -->
+            <div class="filtro-item">
+                <label class="filtro-label">Buscar evento</label>
+                <input type="text" name="search" placeholder="Nombre del evento..."
+                       value="@Context.Request.Query["search"]" class="busqueda-input" />
+            </div>
+
+            <!-- Botones -->
+            <div class="botones-filtro">
+                <button type="submit" class="btn btn-success">Buscar</button>
+                <button type="submit" class="btn btn-danger" name="limpiar" value="true">Limpiar</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@if (Model == null || !Model.Any())
+{
+    <div class="alert alert-info">No tienes eventos creados.</div>
+}
+else
+{
+    <div class="eventos-container">
+        <!-- Encabezado -->
+        <div class="eventos-header">
+            <div class="eventos-header-item">Evento</div>
+            <div class="eventos-header-item">Descripción</div>
+            <div class="eventos-header-item">Fecha Inicio</div>
+            <div class="eventos-header-item">Fecha Fin</div>
+            <div class="eventos-header-item">Estado</div>
+            <div class="eventos-header-item">Acciones</div>
+        </div>
+
+        <!-- Tarjetas de Eventos -->
+        @foreach (var evento in Model)
+        {
+            <div class="evento-card">
+                <!-- Nombre del Evento -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Evento</span>
+                    <span class="evento-item-value evento-nombre">@evento.nombre</span>
+                </div>
+
+                <!-- Descripción -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Descripción</span>
+                    <span class="evento-item-value evento-descripcion">@evento.descripcion</span>
+                </div>
+
+                <!-- Fecha Inicio -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Fecha Inicio</span>
+                    <span class="evento-item-value">@(evento.fecha_inicio?.ToString("dd/MM/yyyy") ?? "-")</span>
+                </div>
+
+                <!-- Fecha Fin -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Fecha Fin</span>
+                    <span class="evento-item-value">@(evento.fecha_fin?.ToString("dd/MM/yyyy") ?? "-")</span>
+                </div>
+
+                <!-- Estado -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Estado</span>
+                    <span class="estado-badge
+                        @(evento.EstadoId == 3 ? "estado-abierto" :
+                          evento.EstadoId == 4 ? "estado-finalizado" :
+                          evento.EstadoId == 5 ? "estado-cancelado" : "estado-cerrado")">
+                        @evento.EstadoNombre
+                    </span>
+                </div>
+
+                <!-- Acciones -->
+                <div class="evento-item">
+                    <span class="evento-item-label">Acciones</span>
+                    <div class="evento-acciones">
+                        <button type="button" class="btn btn-success">Ver inscripciones</button>
+                        <button type="button" class="btn btn-success">Ver Asistencia</button>
+                        <button type="button" class="btn btn-primary">Gestionar</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
