@@ -87,11 +87,10 @@ else
                 </div>
 
                 <!-- Acciones -->
-                <div class="evento-item">
-                    <span class="evento-item-label">Acciones</span>
-                    <div class="evento-acciones">
-                        <button type="button" class="btn btn-success">Ver detalles</button>
-                    </div>
+                <div class="evento-acciones">
+                    <a href="@Url.Action("DetallesEvento", new { id = evento.eventoid })" class="btn btn-success">
+                        Ver detalles
+                    </a>
                 </div>
             </div>
         }

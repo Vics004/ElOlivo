@@ -123,6 +123,8 @@ namespace ElOlivo.Controllers
             }
         }
 
+        //NUEVO
+
 
         public async Task<IActionResult> Buscar_Enventos(string? search)
         {
@@ -163,6 +165,287 @@ namespace ElOlivo.Controllers
                 return Content(ex.ToString());
             }
         }
+
+        public async Task<IActionResult> DetallesEvento(int id)
+        {
+            try
+            {
+                int? usuarioId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioId == null)
+                    return RedirectToAction("Login", "Account");
+
+                // Obtener el evento
+                var evento = await _elOlivoDbContext.evento
+                    .FirstOrDefaultAsync(e => e.eventoid == id);
+
+                if (evento == null)
+                {
+                    TempData["Error"] = "El evento no existe o no se encontró.";
+                    return RedirectToAction("Buscar_Enventos");
+                }
+
+                // Obtener información del administrador
+                var administrador = await _elOlivoDbContext.usuario
+                    .FirstOrDefaultAsync(u => u.usuarioid == evento.usuarioadminid);
+
+                // Obtener estado del evento
+                var estado = await _elOlivoDbContext.estado
+                    .FirstOrDefaultAsync(es => es.estadoid == evento.estadoid);
+
+                // Preparar datos del evento para la vista
+                var eventoData = new
+                {
+                    evento.eventoid,
+                    evento.nombre,
+                    evento.descripcion,
+                    evento.fecha_inicio,
+                    evento.fecha_fin,
+                    evento.direccion,
+                    evento.ubicacion_url,
+                    evento.correo_encargado,
+                    evento.capacidad_maxima,
+                    EncargadoNombre = administrador != null ?
+                        $"{administrador.nombre} {administrador.apellido}" : "No asignado",
+                    EncargadoTelefono = administrador?.telefono ?? "No disponible",
+                    EstadoEvento = estado?.nombre ?? "No definido"
+                };
+
+                // Verificar si el usuario ya está inscrito
+                var inscripcionExistente = await _elOlivoDbContext.inscripcion
+                    .FirstOrDefaultAsync(i => i.eventoid == id && i.usuarioid == usuarioId);
+
+                ViewBag.Evento = eventoData;
+                ViewBag.YaInscrito = inscripcionExistente != null;
+                ViewBag.InscripcionId = inscripcionExistente?.inscripcionid;
+                ViewBag.EventoId = id;
+
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener detalles del evento");
+                TempData["Error"] = "Ocurrió un error al cargar los detalles del evento.";
+                return RedirectToAction("Buscar_Enventos");
+            }
+        }
+
+        public ActionResult GetSesionesEvento(int eventoid)
+        {
+            try
+            {
+                // Obtener las sesiones del evento específico
+                var sesiones = (from s in _elOlivoDbContext.sesion
+                                where s.eventoid == eventoid && (s.activo == null || s.activo == true)
+                                select s).ToList();
+
+                var data = sesiones.Select(e => new
+                {
+                    id = e.sesionid,
+                    title = e.titulo ?? "Sesión sin título",
+                    start = e.fecha_inicio.HasValue
+                        ? e.fecha_inicio.Value.ToString("yyyy-MM-ddTHH:mm:ss")
+                        : null,
+                    end = e.fecha_fin.HasValue
+                        ? e.fecha_fin.Value.ToString("yyyy-MM-ddTHH:mm:ss")
+                        : null,
+                    description = e.descripcion ?? "Sin descripción",
+                    ubicacion = e.ubicacion ?? "Ubicación no definida",
+                    tipo = e.tipo_sesion ?? "Tipo no definido",
+                    color = "#28a745", // Verde para sesiones
+                    textColor = "white",
+                    allDay = false
+                });
+
+                return Json(data);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener sesiones del evento");
+                return Json(new { error = "Error al cargar las sesiones" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> InscribirseEvento(int eventoid)
+        {
+            try
+            {
+                int? usuarioId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioId == null)
+                    return RedirectToAction("Login", "Account");
+
+                // Verificar si ya está inscrito
+                var inscripcionExistente = await _elOlivoDbContext.inscripcion
+                    .FirstOrDefaultAsync(i => i.eventoid == eventoid && i.usuarioid == usuarioId);
+
+                if (inscripcionExistente != null)
+                {
+                    TempData["Error"] = "Ya estás inscrito en este evento.";
+                    return RedirectToAction("DetallesEvento", new { id = eventoid });
+                }
+
+                // Verificar capacidad del evento
+                var evento = await _elOlivoDbContext.evento.FindAsync(eventoid);
+                var totalInscritos = await _elOlivoDbContext.inscripcion
+                    .CountAsync(i => i.eventoid == eventoid);
+
+                if (evento.capacidad_maxima.HasValue && totalInscritos >= evento.capacidad_maxima.Value)
+                {
+                    TempData["Error"] = "El evento ha alcanzado su capacidad máxima.";
+                    return RedirectToAction("DetallesEvento", new { id = eventoid });
+                }
+
+                // Crear nueva inscripción
+                var nuevaInscripcion = new inscripcion
+                {
+                    eventoid = eventoid,
+                    usuarioid = usuarioId,
+                    fecha_inscripcion = DateTime.UtcNow,
+                    estadoid = 2, // 2 = Confirmada (ajusta según tus estados)
+                    comprobante_url = null
+                };
+
+                _elOlivoDbContext.inscripcion.Add(nuevaInscripcion);
+                await _elOlivoDbContext.SaveChangesAsync();
+
+                TempData["Success"] = "¡Te has inscrito exitosamente al evento!";
+                return RedirectToAction("InscripcionExitosa", new { id = eventoid });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al inscribirse al evento");
+                TempData["Error"] = "Ocurrió un error al inscribirse. Intenta nuevamente.";
+                return RedirectToAction("DetallesEvento", new { id = eventoid });
+            }
+        }
+
+        public async Task<IActionResult> InscripcionExitosa(int id)
+        {
+            try
+            {
+                int? usuarioId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioId == null)
+                    return RedirectToAction("Login", "Account");
+
+                var evento = await (from e in _elOlivoDbContext.evento
+                                    where e.eventoid == id
+                                    select new
+                                    {
+                                        e.eventoid,
+                                        e.nombre,
+                                        e.descripcion,
+                                        e.fecha_inicio,
+                                        e.fecha_fin,
+                                        e.direccion
+                                    }).FirstOrDefaultAsync();
+
+                if (evento == null)
+                {
+                    return RedirectToAction("Buscar_Enventos");
+                }
+
+                ViewBag.Evento = evento;
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar página de inscripción exitosa");
+                return Content(ex.ToString());
+            }
+        }
+
+        public IActionResult Ver_Mas(int id) // id puede ser sesionid o eventoid
+        {
+            try
+            {
+                var usuarioId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioId == null)
+                    return RedirectToAction("Autenticar", "Login");
+
+                int eventoid;
+
+                // Verificar si el id es de una sesión (buscar el eventoid correspondiente)
+                var sesion = _elOlivoDbContext.sesion.FirstOrDefault(s => s.sesionid == id);
+                if (sesion != null)
+                {
+                    // El id es un sesionid, obtener el eventoid de la sesión
+                    eventoid = sesion.eventoid.Value;
+                }
+                else
+                {
+                    // El id es un eventoid (comportamiento original)
+                    eventoid = id;
+                }
+
+                var inscripcion = _elOlivoDbContext.inscripcion
+                    .FirstOrDefault(i => i.eventoid == eventoid && i.usuarioid == usuarioId);
+
+               
+
+                //Obtener estado para etiqueta
+                var inscripcionConEstado = (from i in _elOlivoDbContext.inscripcion
+                                            join est in _elOlivoDbContext.estado
+                                                on i.estadoid equals est.estadoid
+                                            where i.eventoid == eventoid && i.usuarioid == usuarioId
+                                            select new
+                                            {
+                                                inscripcion = i,
+                                                estadoNombre = est.nombre
+                                            }).FirstOrDefault();
+
+                //Obtener información para mostrar las sesiones con sus actividades
+                var evento = _elOlivoDbContext.evento.FirstOrDefault(e => e.eventoid == eventoid);
+
+                var sesiones = (from s in _elOlivoDbContext.sesion
+                                where s.eventoid == eventoid && s.activo == true
+                                orderby s.fecha_inicio
+                                select new
+                                {
+                                    s.sesionid,
+                                    s.titulo,
+                                    s.descripcion,
+                                    s.fecha_inicio,
+                                    s.fecha_fin,
+                                    actividades = (from a in _elOlivoDbContext.actividad
+                                                   join u in _elOlivoDbContext.usuario on a.ponenteid equals u.usuarioid
+                                                   where a.sesionid == s.sesionid && a.activo == true
+                                                   orderby a.hora_inicio
+                                                   select new
+                                                   {
+                                                       a.agendaid,
+                                                       a.nombre,
+                                                       a.descripcion,
+                                                       a.hora_inicio,
+                                                       a.hora_fin,
+                                                       ponenteNombre = u.nombre + " " + u.apellido
+                                                   }).ToList()
+                                }).ToList();
+
+                ViewBag.Evento = evento;
+                ViewBag.Sesiones = sesiones;
+                ViewBag.InscripcionEstado =
+                    inscripcionConEstado == null
+                    ? "Cancelado"
+                    : (inscripcionConEstado.estadoNombre == "Inscrito" ? "Confirmada"
+                    : (inscripcionConEstado.estadoNombre == "Pendiente" ? "En proceso"
+                    : inscripcionConEstado.estadoNombre));
+
+                // Pasar el sesionid seleccionado si existe
+                if (sesion != null)
+                {
+                    ViewBag.SesionSeleccionada = id; // sesionid
+                }
+
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en Ver_Mas");
+                return RedirectToAction("Inscripciones");
+            }
+        }
+
+        //NUEVO
 
 
 
@@ -341,7 +624,8 @@ namespace ElOlivo.Controllers
             }
         }
 
-        /*Ver_Mas*/
+        /*
+        //Ver_Mas
         public IActionResult Ver_Mas(int id)
         {
             var usuarioId = HttpContext.Session.GetInt32("usuarioId");
@@ -406,6 +690,7 @@ namespace ElOlivo.Controllers
                 : inscripcionConEstado.estadoNombre));
             return View();
         }
+        */
 
 
         public async Task<IActionResult> Certificados(string? search, int? estado, DateTime? fechaInicio, DateTime? fechaFin)

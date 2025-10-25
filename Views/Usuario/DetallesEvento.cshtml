@@ -1,0 +1,370 @@
+﻿@* Views/Usuario/DetallesEvento.cshtml *@
+@{
+    Layout = "_Layout_Usuario";
+    ViewData["Title"] = "Detalles del Evento";
+
+    var evento = ViewBag.Evento as dynamic;
+    var yaInscrito = ViewBag.YaInscrito as bool? ?? false;
+    var eventoid = ViewBag.EventoId ?? 0;
+
+    // Variables seguras con valores por defecto
+    var eventoNombre = evento?.nombre ?? "Evento no disponible";
+    var eventoDescripcion = evento?.descripcion ?? "Descripción no disponible";
+    var eventoFechaInicio = evento?.fecha_inicio;
+    var eventoFechaFin = evento?.fecha_fin;
+    var eventoDireccion = evento?.direccion ?? "Dirección no disponible";
+    var eventoEncargado = evento?.EncargadoNombre ?? "No asignado";
+    var eventoEmail = evento?.correo_encargado ?? "Email no disponible";
+    var eventoTel = evento?.EncargadoTelefono ?? "Teléfono no disponible";
+    var eventoCapacidad = evento?.capacidad_maxima ?? 0;
+}
+
+<!-- FullCalendar CSS -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
+
+<style>
+    .evento-detalles-container {
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        max-width: 1400px;
+        margin: 20px auto;
+    }
+
+    .evento-header {
+        border-bottom: 2px solid #e5e7eb;
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+
+    .evento-titulo {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 15px;
+    }
+
+    .evento-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.9rem;
+    }
+
+    .info-value {
+        color: #6b7280;
+        font-size: 1rem;
+    }
+
+    .sesiones-section {
+        margin-top: 30px;
+    }
+
+    .sesiones-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 20px;
+    }
+
+    .btn-inscribirse {
+        background: linear-gradient(135deg, #28a745, #218838);
+        color: white;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 20px;
+    }
+
+        .btn-inscribirse:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+    .btn-ya-inscrito {
+        background: #6c757d;
+        color: white;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: not-allowed;
+        margin-top: 20px;
+    }
+
+    .alert {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .alert-success {
+        background: #d1edff;
+        color: #004085;
+        border: 1px solid #b8daff;
+    }
+
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    #calendar {
+        max-width: 100%;
+        margin: 20px auto;
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .sesion-info-panel {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+        border-left: 4px solid #28a745;
+    }
+
+    .sesion-seleccionada-titulo {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 10px;
+    }
+
+    .btn-ver-detalles {
+        background: #007bff;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 15px;
+    }
+
+        .btn-ver-detalles:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+</style>
+
+<div class="evento-detalles-container">
+    <!-- Alertas -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-error">
+            @TempData["Error"]
+        </div>
+    }
+
+    @if (evento == null)
+    {
+        <div class="alert alert-error">
+            No se pudo cargar la información del evento.
+        </div>
+    }
+    else
+    {
+        <div class="evento-header">
+            <h1 class="evento-titulo">@eventoNombre</h1>
+
+            <div class="evento-info-grid">
+                <div class="info-item">
+                    <span class="info-label">📅 Duración</span>
+                    <span class="info-value">
+                        @(eventoFechaInicio?.ToString("dd/MM/yyyy") ?? "No definida") - @(eventoFechaFin?.ToString("dd/MM/yyyy") ?? "No definida")
+                    </span>
+                </div>
+
+                <div class="info-item">
+                    <span class="info-label">📍 Ubicación</span>
+                    <span class="info-value">@eventoDireccion</span>
+                </div>
+
+                <div class="info-item">
+                    <span class="info-label">👤 Encargado del evento</span>
+                    <span class="info-value">@eventoEncargado</span>
+                </div>
+
+                <div class="info-item">
+                    <span class="info-label">📧 Email</span>
+                    <span class="info-value">@eventoEmail</span>
+                </div>
+
+                <div class="info-item">
+                    <span class="info-label">📞 Teléfono</span>
+                    <span class="info-value">@eventoTel</span>
+                </div>
+
+                <div class="info-item">
+                    <span class="info-label">👥 Capacidad</span>
+                    <span class="info-value">@eventoCapacidad participantes</span>
+                </div>
+            </div>
+
+            <div class="info-item">
+                <span class="info-label">📝 Descripción</span>
+                <span class="info-value">@eventoDescripcion</span>
+            </div>
+        </div>
+
+        <!-- Botón de inscripción -->
+        @if (yaInscrito)
+        {
+            <button class="btn-ya-inscrito" disabled>
+                ✅ Ya estás inscrito
+            </button>
+        }
+        else if (eventoid > 0)
+        {
+            <form asp-action="InscribirseEvento" method="post">
+                <input type="hidden" name="eventoid" value="@eventoid" />
+                <button type="submit" class="btn-inscribirse">
+                    📝 Inscribirse al Evento
+                </button>
+            </form>
+        }
+
+        <!-- Agenda de Sesiones con Calendario -->
+        <div class="sesiones-section">
+            <h2 class="sesiones-title">📋 Agenda de Sesiones</h2>
+
+            <div id="calendar"></div>
+
+            <!-- Panel de información de sesión seleccionada -->
+            <div id="sesion-info-panel" class="sesion-info-panel" style="display: none;">
+                <h3 class="sesion-seleccionada-titulo" id="sesion-titulo"></h3>
+                <div id="sesion-descripcion"></div>
+                <div id="sesion-detalles"></div>
+                @if (eventoid > 0)
+                {
+                    <button id="btn-ver-detalles" class="btn-ver-detalles">
+                        👁️ Ver Detalles Completos
+                    </button>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- FullCalendar JS -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/locales/es.global.min.js"></script>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var calendarEl = document.getElementById('calendar');
+
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'es',
+                timeZone: 'local',
+                height: 'auto',
+                eventDisplay: 'block',
+                eventColor: '#28a745', // Verde para sesiones
+
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+                },
+
+                buttonText: {
+                    today: 'Hoy',
+                    month: 'Mes',
+                    week: 'Semana',
+                    day: 'Día',
+                    list: 'Lista'
+                },
+
+                // Cargar sesiones del evento específico
+                events: '/Usuario/GetSesionesEvento?eventoid=@eventoid',
+
+                eventClick: function (info) {
+                    info.jsEvent.preventDefault();
+
+                    // Mostrar información detallada de la sesión
+                    mostrarDetallesSesion(info.event);
+                }
+            });
+
+            calendar.render();
+
+            // Función para mostrar detalles de la sesión seleccionada
+            function mostrarDetallesSesion(event) {
+                const panel = document.getElementById('sesion-info-panel');
+                const titulo = document.getElementById('sesion-titulo');
+                const descripcion = document.getElementById('sesion-descripcion');
+                const detalles = document.getElementById('sesion-detalles');
+                const btnVerDetalles = document.getElementById('btn-ver-detalles');
+
+                // Mostrar información de la sesión
+                titulo.textContent = event.title || 'Sesión sin título';
+                descripcion.innerHTML = `<p><strong>Descripción:</strong> ${event.extendedProps.description || 'No disponible'}</p>`;
+
+                detalles.innerHTML = `
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+                                <div>
+                                    <strong>📅 Fecha:</strong><br>
+                                    ${event.start ? event.start.toLocaleDateString('es-ES') : 'No disponible'}
+                                </div>
+                                <div>
+                                    <strong>⏰ Hora:</strong><br>
+                                    ${event.start ? event.start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : ''} -
+                                    ${event.end ? event.end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                </div>
+                                <div>
+                                    <strong>📍 Ubicación:</strong><br>
+                                    ${event.extendedProps.ubicacion || 'No disponible'}
+                                </div>
+                                <div>
+                                    <strong>🎯 Tipo:</strong><br>
+                                    ${event.extendedProps.tipo || 'No disponible'}
+                                </div>
+                            </div>
+                        `;
+
+                // Configurar el botón para ir a la vista Ver_mas
+                btnVerDetalles.onclick = function () {
+                    // Enviar el sesionid a Ver_Mas
+                    window.location.href = '@Url.Action("Ver_Mas", "Usuario")' + '?id=' + event.id;
+                };
+
+                // Mostrar el panel
+                panel.style.display = 'block';
+
+                // Scroll suave al panel
+                panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        });
+    </script>
+}
