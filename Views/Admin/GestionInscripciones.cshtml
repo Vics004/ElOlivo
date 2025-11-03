@@ -30,6 +30,7 @@
     </form>
 </div>
 
+
 @if (Model == null || !Model.Any())
 {
     <div class="alert alert-info">No tienes eventos creados.</div>
@@ -90,9 +91,8 @@ else
                 <div class="evento-item">
                     <span class="evento-item-label">Acciones</span>
                     <div class="evento-acciones">
-                        <button type="button" class="btn btn-success">Ver inscripciones</button>
-                        <button type="button" class="btn btn-success">Ver Asistencia</button>
-                        <button type="button" class="btn btn-primary">Gestionar</button>
+                        <a asp-action="GestionUsuarios" asp-route-eventId="@evento.eventoid" class="btn btn-success">Ver inscripciones</a>
+                        <a asp-action="VerSesiones" asp-controller="Admin" asp-route-id="@evento.eventoid" class="btn btn-primary">Ver Asistencia</a>
                     </div>
                 </div>
             </div>

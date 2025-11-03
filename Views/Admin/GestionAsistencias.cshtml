@@ -1,7 +1,94 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model IEnumerable<dynamic>
 @{
     Layout = "_Layout_Admin";
+    var sesion = ViewBag.Sesion;
+    var eventoId = ViewBag.EventoId;
+    // Se asume que el objeto Evento se pasó al ViewBag en el controlador
+    var nombreEvento = ViewBag.Evento?.nombre ?? "Evento Desconocido";
+    ViewData["Title"] = $"Asistencia: {sesion.titulo}";
 }
-<h4>Gestión de Asistencias</h4>
+
+<h2 class="page-title">Gestión de Asistencia</h2>
+<h3>Evento: @nombreEvento</h3>
+<p>Sesión: @sesion.titulo</p>
+<p>Fecha: @(sesion.fecha_inicio?.ToString("dd/MM/yyyy HH:mm") ?? "-")</p>
+
+@if (TempData["MensajeExito"] != null)
+{
+    <div class="alert alert-success">@TempData["MensajeExito"]</div>
+}
+
+@if (ViewBag.MensajeNoAlumnos != null)
+{
+    <div class="alert alert-warning">@ViewBag.MensajeNoAlumnos</div>
+    <a asp-action="VerSesiones" asp-controller="Admin" asp-route-id="@eventoId" class="btn btn-secondary" style="margin-top: 15px;">Volver a Sesiones</a>
+}
+else if (Model != null && Model.Any())
+{
+    <div class="export-options" style="margin-bottom: 15px;">
+        <div class="dropdown">
+            <button class="btn btn-primary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                Exportar Reporte
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                <li>
+                    <a class="dropdown-item"
+                       href="@Url.Action("ExportarExcelAsistencias", "Admin", new { eventoId = eventoId, sesionId = sesion.sesionid })">
+                        Exportar en Excel
+                    </a>
+                </li>
+
+                <li>
+                    <a class="dropdown-item"
+                       href="@Url.Action("ExportarPDFAsistencias", "Admin", new { eventoId = eventoId, sesionId = sesion.sesionid })">
+                        Exportar en PDF
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <form asp-action="GuardarAsistencias" asp-controller="Admin" method="post">
+        <input type="hidden" name="sesionId" value="@sesion.sesionid" />
+        <input type="hidden" name="eventoId" value="@eventoId" />
+
+        <table class="table table-striped" style="margin-top: 20px;">
+            <thead>
+                <tr>
+                    <th>Nombre del Usuario</th>
+                    <th>Email</th>
+                    <th>Asistió</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var usuario in Model)
+                {
+                    <tr>
+                        <td>@usuario.NombreCompleto</td>
+                        <td>@usuario.email</td>
+                        <td>
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       name="asistieron"
+                                       value="@usuario.usuarioid"
+                                       id="chk-@usuario.usuarioid"
+                                       @(usuario.Asistio ? "checked" : "")>
+                                <label class="form-check-label" for="chk-@usuario.usuarioid">
+                                    Presente
+                                </label>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <button type="submit" class="btn btn-success" style="margin-top: 15px;">Guardar Asistencia</button>
+        <a asp-action="VerSesiones" asp-controller="Admin" asp-route-id="@eventoId" class="btn btn-secondary" style="margin-top: 15px;">Volver a Sesiones</a>
+    </form>
+}
+else
+{
+    <div class="alert alert-info">No hay usuarios inscritos elegibles para registrar asistencia en esta sesión.</div>
+    <a asp-action="VerSesiones" asp-controller="Admin" asp-route-id="@eventoId" class="btn btn-secondary" style="margin-top: 15px;">Volver a Sesiones</a>
+}

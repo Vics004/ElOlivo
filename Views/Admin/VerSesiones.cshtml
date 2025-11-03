@@ -1,0 +1,268 @@
+﻿@* Views/AdminEventos/Ver_Mas.cshtml (O el nombre de su vista) *@
+@* Asegúrese de cambiar el Layout a Admin *@
+@{
+    Layout = "_Layout_Admin";
+    var evento = ViewBag.Evento;
+    var sesiones = ViewBag.Sesiones;
+}
+
+<style>
+    .evento-container {
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        max-width: 1400px;
+        margin: 20px auto;
+    }
+
+    .badge-estado {
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .badge-confirmada {
+        background-color: #6366f1;
+    }
+
+    .badge-proceso {
+        background-color: #f59e0b;
+    }
+
+    .badge-no-disponible {
+        background-color: #9ca3af;
+    }
+
+    .fecha-hora {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .fecha-badge {
+        background-color: #28a745;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 500;
+        display: inline-block;
+        transition: transform 0.2s ease;
+    }
+
+        .fecha-badge:hover {
+            transform: scale(1.1);
+        }
+
+    .evento-titulo {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 15px;
+    }
+
+    .sesion-card {
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #28a745;
+    }
+
+    .sesion-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .sesion-titulo {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 10px;
+    }
+
+    .sesion-descripcion {
+        color: #6b7280;
+        font-size: 15px;
+        line-height: 1.6;
+        margin-bottom: 20px;
+    }
+
+    .actividad-item {
+        background-color: #28a745;
+        color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+        .actividad-item:hover {
+            background-color: #d1d5db;
+            transition: all 0.05s;
+            color: #258cfb;
+        }
+
+    .actividad-nombre {
+        font-size: 16px;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .actividad-detalle {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #e5e7eb;
+        display: none;
+    }
+
+        .actividad-detalle.show {
+            display: block;
+        }
+
+    .actividad-descripcion {
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 12px;
+    }
+
+    .ponente-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .chevron {
+        font-size: 18px;
+        transition: transform 0.3s;
+    }
+
+    .no-actividades,
+    .no-sesiones {
+        color: #9ca3af;
+        font-style: italic;
+        padding: 15px;
+        text-align: center;
+    }
+
+    .boton-comprobante {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: none;
+        background-color: #f97316;
+        color: white;
+        font-weight: 600;
+        margin-top: 10px;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .boton-container {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 15px;
+    }
+</style>
+
+<div class="evento-container">
+    @if (sesiones != null && sesiones.Count > 0)
+    {
+        foreach (var sesion in sesiones)
+        {
+
+
+            DateTime? fechaInicio = sesion.fecha_inicio as DateTime?;
+            <div class="sesion-card">
+                <div class="sesion-header">
+                    @{
+                        var estadoInscripcion = ViewBag.InscripcionEstado as string;
+                        var claseEstado = estadoInscripcion == "Confirmada" ? "badge-confirmada"
+                        : estadoInscripcion == "En proceso" ? "badge-proceso"
+                        : "badge-no-disponible";
+                    }
+                    <div class="badge-estado @claseEstado">@estadoInscripcion</div>
+                    @if (fechaInicio != null)
+                    {
+                        <div class="fecha-hora">
+                            <div class="fecha-badge">
+                                @fechaInicio.Value.ToString("dd MMMM, yyyy", new System.Globalization.CultureInfo("es-ES"))
+                            </div>
+                            <div class="fecha-badge">
+                                @fechaInicio.Value.ToString("h:mm tt", new System.Globalization.CultureInfo("es-ES"))
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <h1 class="evento-titulo">@evento.nombre</h1>
+                <h2 class="sesion-titulo">Sesión: @sesion.titulo</h2>
+                <p class="sesion-descripcion">@sesion.descripcion</p>
+
+                @if (sesion.actividades != null && sesion.actividades.Count > 0)
+                {
+                    foreach (var actividad in sesion.actividades)
+                    {
+                        <div class="actividad-item" onclick="toggleActividad(event, @actividad.agendaid)">
+                            <div class="actividad-nombre">
+                                <span>@actividad.nombre</span>
+                                <i class="chevron" id="chevron-act-@actividad.agendaid">▼</i>
+                            </div>
+                            <div class="actividad-detalle" id="detalle-@actividad.agendaid">
+                                <p class="actividad-descripcion">@actividad.descripcion</p>
+                                <div class="ponente-info">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M8 8C10.21 8 12 6.21 12 4C12 1.79 10.21 0 8 0C5.79 0 4 1.79 4 4C4 6.21 5.79 8 8 8ZM8 10C5.33 10 0 11.34 0 14V16H16V14C16 11.34 10.67 10 8 10Z" fill="white" />
+                                    </svg>
+                                    <span>Ponente: @actividad.ponenteNombre</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="boton-container">
+                        <a asp-action="GestionAsistencias"
+                           asp-controller="Admin"
+                           asp-route-eventoId="@evento.eventoid"
+                           asp-route-sesionId="@sesion.sesionid"
+                           class="boton-comprobante">
+                            Gestionar Asistencia
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <div class="no-actividades">No hay actividades programadas para esta sesión</div>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <div class="no-sesiones">No hay sesiones programadas para este evento</div>
+    }
+</div>
+
+<script>
+    function toggleActividad(event, agendaId) {
+        event.stopPropagation();
+        const detalle = document.getElementById('detalle-' + agendaId);
+        const chevron = document.getElementById('chevron-act-' + agendaId);
+        detalle.classList.toggle('show');
+        chevron.style.transform = detalle.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+</script>
+
