@@ -1,0 +1,579 @@
+﻿
+<div class="modal fade" id="nuevaAgendaModal" tabindex="-1" role="dialog" aria-labelledby="nuevaAgendaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content" style="border-radius: 15px; border: none;">
+
+        
+            <div class="modal-header" style="border-bottom: none; padding: 25px 25px 10px 25px;">
+                <h5 class="modal-title" id="nuevaAgendaModalLabel" style="color: #5abf73; font-weight: 600; font-size: 1.2rem;">
+                    <i class="fas fa-calendar-plus" style="color: #6c75fb;"></i> Nueva Agenda
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="outline: none;">
+                    <span aria-hidden="true" style="color: #ccc; font-size: 1.5rem;">&times;</span>
+                </button>
+            </div>
+
+        
+            <div class="modal-body" style="padding: 20px 25px;">
+                <form id="formNuevaAgenda">
+                    <input type="hidden" id="sesionIdAgenda" name="sesionId">
+
+                  
+                    <div class="form-group mb-3">
+                        <label for="nombreAgenda" style="font-weight: 600; color: #333; font-size: 0.9rem;">
+                            Nombre de la actividad <span class="text-danger">*</span>
+                        </label>
+                        <input type="text"
+                               class="form-control"
+                               id="nombreAgenda"
+                               placeholder="Ej: Ponencia inaugural, Panel de discusión"
+                               required
+                               style="border-radius: 8px; border: 1px solid #ced4da; padding: 10px 15px;">
+                    </div>
+
+                  
+                    <div class="form-group mb-3">
+                        <label for="descripcionAgenda" style="font-weight: 600; color: #333; font-size: 0.9rem;">Descripción</label>
+                        <textarea class="form-control"
+                                  id="descripcionAgenda"
+                                  rows="3"
+                                  placeholder="Descripción de la actividad"
+                                  style="border-radius: 8px; border: 1px solid #ced4da; padding: 10px 15px; resize: vertical;"></textarea>
+                    </div>
+
+               
+                    <div class="form-group mb-3">
+                        <label for="tipoActividadAgenda" style="font-weight: 600; color: #333; font-size: 0.9rem;">Tipo de actividad</label>
+                        <select id="tipoActividadAgenda"
+                                class="form-control **form-select-agenda**" style="border-radius: 8px; border: 1px solid #ced4da;">
+                            <option value="">Seleccione un tipo de actividad</option>
+                        </select>
+                    </div>
+
+                    <div class="col-6">
+                        <label for="horaInicioAgenda" style="font-weight: 600; color: #333; font-size: 0.9rem;">Hora inicio <span class="text-danger">*</span></label>
+                        <select class="form-control **form-select-agenda**" id="horaInicioAgenda"
+                                required
+                                style="border-radius: 8px; border: 1px solid #ced4da;">
+                            <option value="">-- Seleccionar hora --</option>
+                        </select>
+                    </div>
+
+                    <div class="col-6">
+                        <label for="horaFinAgenda" style="font-weight: 600; color: #333; font-size: 0.9rem;">Hora fin <span class="text-danger">*</span></label>
+                        <select class="form-control **form-select-agenda**" id="horaFinAgenda"
+                                required
+                                style="border-radius: 8px; border: 1px solid #ced4da;">
+                            <option value="">-- Seleccionar hora --</option>
+                        </select>
+                    </div>
+
+                  
+                    <div id="alertaHorarioAgenda" class="alert alert-info" style="display: none; border-radius: 10px; padding: 10px 15px; font-size: 0.9rem;">
+                        <i class="fas fa-info-circle"></i> <span id="textoAlertaHorario"></span>
+                    </div>
+
+                  
+                    <!-- Ponente -->
+                    <div class="form-group mb-3">
+                        <label for="ponenteAgenda" style="font-weight: 600; color: #333; font-size: 0.9rem;">
+                            Ponente <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="email"
+                                   class="form-control"
+                                   id="ponenteAgenda"
+                                   placeholder="Correo del ponente"
+                                   required>
+                            <button type="button" id="btnBuscarPonente" class="btn btn-outline-secondary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        <small id="mensajeValidacionPonente" class="form-text"></small>
+                    </div>
+                </form>
+            </div>
+
+       
+            <div class="modal-footer" style="border-top: none; padding: 10px 25px 25px 25px; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"
+                        style="background-color: #ccc; border: none; font-weight: 600; padding: 10px 25px; border-radius: 8px;">
+                    Cancelar
+                </button>
+                <button type="button" id="btnGuardarAgenda" class="btn btn-primary"
+                        style="background-color: #6c75fb; border-color: #6c75fb; font-weight: 600; padding: 10px 30px; border-radius: 8px;">
+                    <i class="fas fa-save"></i> Guardar Agenda
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<style>
+    .sesion-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+
+    .sesion-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .sesion-card.selected {
+        border-color: #6a5acd;
+        background-color: #f8f7ff;
+    }
+
+    .ponente-valido {
+        border-color: #28a745 !important;
+        background-color: #d4edda !important;
+    }
+
+    .ponente-invalido {
+        border-color: #dc3545 !important;
+        background-color: #f8d7da !important;
+    }
+
+    .agenda-item {
+        border-left: 4px solid #6a5acd;
+        padding: 10px;
+        margin-bottom: 10px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+    }
+
+    .agenda-item:hover {
+        background-color: #e9ecef;
+    }
+
+
+    .form-select-agenda {
+        padding: 6px 15px !important;
+        font-size: 0.9rem;
+        height: auto !important;
+    }
+
+    #ponenteAgenda {
+        border-radius: 8px 0 0 8px;
+        border: 1px solid #ced4da;
+        padding: 12px 15px; 
+        border-right: none;
+        height: 46px; 
+    }
+
+    #btnBuscarPonente {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 46px; 
+        border: 1px solid #ced4da;
+        border-left: none;
+        border-radius: 0 8px 8px 0;
+        background-color: #fff;
+        color: #888;
+        cursor: pointer;
+        padding: 0 15px;
+    }
+
+        #btnBuscarPonente:hover {
+            background-color: #f8f9fa;
+            color: #555;
+        }
+</style>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.0/js/bootstrap.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        let sesionHoraInicio = null;
+        let sesionHoraFin = null;
+        let ponenteValido = false;
+        let usuarioPonente = null;
+
+       
+
+        function formatTime12h(time24) {
+            const [hours, minutes] = time24.split(':').map(Number);
+            const suffix = hours >= 12 ? 'PM' : 'AM';
+            const hour12 = hours % 12 || 12;
+            const minuteStr = minutes.toString().padStart(2, '0');
+            return `${hour12}:${minuteStr} ${suffix}`;
+        }
+
+        function generarHorasIntervalo30(horaInicio, horaFin) {
+            const horas = [];
+            const [startH, startM] = horaInicio.split(':').map(Number);
+            const [endH, endM] = horaFin.split(':').map(Number);
+
+            let currentH = startH;
+            let currentM = startM;
+
+            while (currentH < endH || (currentH === endH && currentM <= endM)) {
+                const hora24 = `${currentH.toString().padStart(2, '0')}:${currentM.toString().padStart(2, '0')}`;
+                horas.push(hora24);
+
+                currentM += 30;
+                if (currentM >= 60) {
+                    currentM = 0;
+                    currentH++;
+                }
+            }
+
+            return horas;
+        }
+
+        function mostrarAlerta(mensaje, tipo = 'info') {
+            const alertClass = tipo === 'error' ? 'alert-danger' : 'alert-success';
+            const icon = tipo === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle';
+
+            const alerta = $(`
+                        <div class="alert ${alertClass} alert-dismissible fade show" role="alert"
+                             style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+                            <i class="fas ${icon}"></i> ${mensaje}
+                            <button type="button" class="close" data-dismiss="alert">
+                                <span>&times;</span>
+                            </button>
+                        </div>
+                    `);
+
+            $('body').append(alerta);
+            setTimeout(() => alerta.fadeOut(() => alerta.remove()), 3000);
+        }
+
+        
+        $('#nuevaAgendaModal').on('show.bs.modal', function (e) {
+            
+            if (window.modalState) {
+                sesionHoraInicio = window.modalState.horaInicio;
+                sesionHoraFin = window.modalState.horaFin;
+
+               
+                cargarTiposActividad();
+                poblarHorariosAgenda();
+                limpiarFormularioAgenda();
+
+                
+                $('#alertaHorarioAgenda')
+                    .removeClass('alert-danger')
+                    .addClass('alert-info')
+                    .show();
+                $('#textoAlertaHorario').html(
+                    `Esta sesión es de ${formatTime12h(sesionHoraInicio)} a ${formatTime12h(sesionHoraFin)}`
+                );
+            } else {
+                console.error('❌ No hay modalState disponible');
+                mostrarAlerta('Error: No se pudo cargar la información de la sesión', 'error');
+                $(this).modal('hide');
+            }
+        });
+
+      
+
+        function cargarTiposActividad() {
+            $.ajax({
+                url: '/Admin/ObtenerTiposActividadTemp',
+                type: 'GET',
+                success: function (tipos) {
+                    const select = $('#tipoActividadAgenda');
+                    select.empty();
+                    select.append('<option value="">-- Seleccionar tipo --</option>');
+
+                    if (tipos && tipos.length > 0) {
+                        tipos.forEach(tipo => {
+                            const id = tipo.IdTemp || tipo.id || tipo.tipoactividadoid;
+                            const nombre = tipo.nombre || tipo.Nombre || "";
+                            select.append(`<option value="${id}">${nombre}</option>`);
+                        });
+                    } else {
+                        select.append('<option value="" disabled>No hay tipos de actividad agregados</option>');
+                    }
+                },
+                error: function (error) {
+                    console.error('Error al cargar tipos de actividad:', error);
+                }
+            });
+        }
+
+      
+
+        function poblarHorariosAgenda() {
+            if (!sesionHoraInicio || !sesionHoraFin) {
+                console.error('❌ No hay horarios de sesión disponibles');
+                return;
+            }
+
+            const horasDisponibles = generarHorasIntervalo30(sesionHoraInicio, sesionHoraFin);
+
+           
+            const selectInicio = $('#horaInicioAgenda');
+            selectInicio.empty();
+            selectInicio.append('<option value="">-- Seleccionar hora --</option>');
+
+            horasDisponibles.forEach(hora => {
+                selectInicio.append(`<option value="${hora}">${formatTime12h(hora)}</option>`);
+            });
+
+         
+            if (horasDisponibles.length > 0) {
+                selectInicio.val(horasDisponibles[0]);
+                poblarHoraFinAgenda();
+            }
+        }
+
+        function poblarHoraFinAgenda() {
+            const horaInicio = $('#horaInicioAgenda').val();
+            if (!horaInicio) return;
+
+            const selectFin = $('#horaFinAgenda');
+            const horaActual = selectFin.val();
+            selectFin.empty();
+            selectFin.append('<option value="">-- Seleccionar hora --</option>');
+
+            const horasDisponibles = generarHorasIntervalo30(sesionHoraInicio, sesionHoraFin);
+
+          
+            const [inicioH, inicioM] = horaInicio.split(':').map(Number);
+
+            horasDisponibles.forEach(hora => {
+                const [h, m] = hora.split(':').map(Number);
+                const minutos = h * 60 + m;
+                const minutosInicio = inicioH * 60 + inicioM;
+
+                if (minutos > minutosInicio) {
+                    selectFin.append(`<option value="${hora}">${formatTime12h(hora)}</option>`);
+                }
+            });
+
+            
+            if (horaActual && selectFin.find(`option[value="${horaActual}"]`).length > 0) {
+                selectFin.val(horaActual);
+            }
+        }
+
+        $('#horaInicioAgenda').on('change', function () {
+            poblarHoraFinAgenda();
+           
+            $('#alertaHorarioAgenda')
+                .removeClass('alert-danger')
+                .addClass('alert-info')
+                .show();
+            $('#textoAlertaHorario').html(
+                `Esta sesión es de ${formatTime12h(sesionHoraInicio)} a ${formatTime12h(sesionHoraFin)}`
+            );
+        });
+
+       
+        $('#horaFinAgenda').on('change', function () {
+            $('#alertaHorarioAgenda')
+                .removeClass('alert-danger')
+                .addClass('alert-info')
+                .show();
+            $('#textoAlertaHorario').html(
+                `Esta sesión es de ${formatTime12h(sesionHoraInicio)} a ${formatTime12h(sesionHoraFin)}`
+            );
+        });
+
+        
+
+        $('#btnBuscarPonente').on('click', function () {
+            const correo = $('#ponenteAgenda').val().trim();
+
+            if (!correo) {
+                mostrarAlerta('Por favor ingrese un correo', 'error');
+                return;
+            }
+
+            $.ajax({
+                url: '/Admin/ValidarPonente',
+                type: 'GET',
+                data: { correo: correo },
+                success: function (data) {
+                    if (data.existe) {
+                        $('#ponenteAgenda').removeClass('ponente-invalido').addClass('ponente-valido');
+                        $('#mensajeValidacionPonente').removeClass('text-danger').addClass('text-success');
+                        $('#mensajeValidacionPonente').text('✓ Ponente encontrado: ' + data.nombreCompleto);
+                        ponenteValido = true;
+                        usuarioPonente = data.usuarioId;
+                    } else {
+                        $('#ponenteAgenda').removeClass('ponente-valido').addClass('ponente-invalido');
+                        $('#mensajeValidacionPonente').removeClass('text-success').addClass('text-danger');
+                        $('#mensajeValidacionPonente').text('✗ No existe un usuario con este correo');
+                        ponenteValido = false;
+                        usuarioPonente = null;
+                    }
+                },
+                error: function (error) {
+                    console.error('Error:', error);
+                    mostrarAlerta('Error al validar el ponente', 'error');
+                }
+            });
+        });
+
+        $('#ponenteAgenda').on('input', function () {
+            $(this).removeClass('ponente-valido ponente-invalido');
+            $('#mensajeValidacionPonente').text('');
+            ponenteValido = false;
+            usuarioPonente = null;
+        });
+
+      
+        $('#btnGuardarAgenda').on('click', function () {
+            
+            const nombre = $('#nombreAgenda').val().trim();
+            if (!nombre) {
+                mostrarAlerta('Por favor ingrese el nombre de la actividad', 'error');
+                return;
+            }
+
+            const tipoActividad = $('#tipoActividadAgenda').val();
+            if (!tipoActividad) {
+                mostrarAlerta('Por favor seleccione un tipo de actividad', 'error');
+                return;
+            }
+
+            const horaInicio = $('#horaInicioAgenda').val();
+            if (!horaInicio) {
+                mostrarAlerta('Por favor seleccione la hora de inicio', 'error');
+                return;
+            }
+
+            const horaFin = $('#horaFinAgenda').val();
+            if (!horaFin) {
+                mostrarAlerta('Por favor seleccione la hora de fin', 'error');
+                return;
+            }
+
+            if (!ponenteValido || !usuarioPonente) {
+                mostrarAlerta('Por favor valide el correo del ponente', 'error');
+                return;
+            }
+
+            
+            const sesionId = window.obtenerSesionSeleccionada();
+
+            if (!sesionId) {
+                mostrarAlerta('Error: No se encontró la sesión seleccionada', 'error');
+                return;
+            }
+
+           
+            const datosAgenda = {
+                sesionId: sesionId,
+                nombre: nombre,
+                descripcion: $('#descripcionAgenda').val().trim(),
+                tipoActividadId: tipoActividad,
+                horaInicio: horaInicio,
+                horaFin: horaFin,
+                ponenteId: usuarioPonente,
+                ponenteCorreo: $('#ponenteAgenda').val().trim()
+            };
+
+           
+            $.ajax({
+                url: '/Admin/GuardarAgendaTemp',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(datosAgenda),
+                success: function (response) {
+                    
+
+                    if (response.success) {
+                        mostrarAlerta('Agenda guardada correctamente', 'success');
+                        $('#nuevaAgendaModal').modal('hide');
+
+                        
+                        if (response.agendas && response.agendas.length > 0) {
+                            const $dropdown = $('#selectAgendasSesion');
+                            $dropdown.empty();
+                            $dropdown.append('<option value="" selected disabled>Seleccione una agenda</option>');
+
+                            response.agendas.forEach(agenda => {
+                                const horaInicio = new Date(agenda.horaInicio).toLocaleTimeString('es-ES', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                });
+                                const horaFin = new Date(agenda.horaFin).toLocaleTimeString('es-ES', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                });
+
+                                $dropdown.append(
+                                    `<option value="${agenda.IdTemp}">${agenda.nombre} (${horaInicio} - ${horaFin})</option>`
+                                );
+                            });
+
+                            
+                        }
+
+                       
+                    } else {
+                        
+                        if (response.conflicto) {
+                            
+                            $('#alertaHorarioAgenda')
+                                .removeClass('alert-info')
+                                .addClass('alert-danger')
+                                .show();
+                            $('#textoAlertaHorario').html(
+                                `<i class="fas fa-exclamation-triangle"></i> ${response.mensaje}`
+                            );
+
+                            
+                            mostrarAlerta(response.mensaje, 'error');
+                        } else {
+                            
+                            mostrarAlerta('Error: ' + response.mensaje, 'error');
+                        }
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('❌ Error al guardar agenda:', xhr.responseText);
+                    mostrarAlerta('Error al guardar la agenda', 'error');
+                }
+            });
+        });
+
+     
+
+        function limpiarFormularioAgenda() {
+            $('#formNuevaAgenda')[0].reset();
+            $('#ponenteAgenda').removeClass('ponente-valido ponente-invalido');
+            $('#mensajeValidacionPonente').text('');
+            ponenteValido = false;
+            usuarioPonente = null;
+
+            
+            $('#alertaHorarioAgenda')
+                .removeClass('alert-danger')
+                .addClass('alert-info');
+        }
+
+        $('#nuevaAgendaModal').on('hidden.bs.modal', function () {
+            limpiarFormularioAgenda();
+        });
+    });
+
+    $(document).ready(function () {
+       
+        $('.close').on('click', function() {
+            $('#nuevaAgendaModal').modal('hide');
+        });
+
+        
+        $('.btn-secondary[data-dismiss="modal"]').on('click', function() {
+            $('#nuevaAgendaModal').modal('hide');
+        });
+
+       
+        $(document).on('keydown', function(e) {
+            if (e.keyCode === 27) { 
+                $('#nuevaAgendaModal').modal('hide');
+            }
+        });
+    });
+</script>

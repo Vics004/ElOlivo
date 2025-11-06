@@ -1,0 +1,835 @@
+﻿
+<div class="modal fade" id="nuevaSesionModal" tabindex="-1" role="dialog" aria-labelledby="nuevaSesionModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+
+          
+            <div class="modal-header">
+                <h5 class="modal-title" id="nuevaSesionModalLabel" style="color: #4CAF50;">Nueva Sesión</h5>
+                <button type="button" class="close" onclick="$('#nuevaSesionModal').modal('hide')" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+      
+            <div class="modal-body">
+                <form id="formNuevaSesion">
+                    <div class="mb-3">
+                        <label for="tituloSesion" class="form-label">Título</label>
+                        <input type="text" class="form-control" id="tituloSesion" placeholder="Ingrese el título de la sesión" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="tipoSesion" class="form-label">Tipo de sesión</label>
+                        <input type="text" class="form-control" id="tipoSesion"
+                               placeholder="Ej: Conferencia, Taller, Mesa Redonda" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descripcionSesion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="descripcionSesion" rows="3" placeholder="Describe el contenido de esta sesión"></textarea>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-8">
+                            <label for="fechaInicio" class="form-label">Fecha inicio</label>
+                            <input type="date" class="form-control" id="fechaInicio" required>
+                        </div>
+                        <div class="col-4">
+                            <label for="horaInicio" class="form-label">Hora</label>
+                            <select class="form-control" id="horaInicio" required>
+                                <option value="">-- Seleccionar --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-8">
+                            <label for="fechaFin" class="form-label">Fecha fin</label>
+                            <input type="date" class="form-control" id="fechaFin" required>
+                            <small id="mensajeErrorFechaFinSesion" class="mensaje-error-fecha">
+                                <i class="fas fa-exclamation-circle"></i> La fecha fin debe ser posterior a la fecha inicio
+                            </small>
+                        </div>
+                        <div class="col-4">
+                            <label for="horaFin" class="form-label">Hora</label>
+                            <select class="form-control" id="horaFin" required>
+                                <option value="">-- Seleccionar --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="ubicacionSesion" class="form-label">Ubicación</label>
+                        <input type="text" class="form-control" id="ubicacionSesion"
+                               placeholder="Ej: UCES - Aula Magna, Salón 101, Auditorio Central" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="capacidadSesion" class="form-label">Capacidad</label>
+                        <input type="number" class="form-control" id="capacidadSesion" placeholder="Cantidad" required min="1">
+                        <div id="mensajeErrorCapacidad" class="invalid-feedback" style="display: none;"></div>
+                        <small class="form-text text-muted" id="mensajeCapacidadGlobal">
+                            Primero defina la capacidad máxima del evento
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="moderadorSesion" class="form-label">Moderador</label>
+                        <div class="input-group">
+                            <input type="email" class="form-control" id="moderadorSesion" placeholder="Ingrese el correo" required>
+                            <button type="button" id="btnBuscarModerador" class="btn btn-outline-secondary input-group-text" style="border-left: 0;">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        <small id="mensajeValidacionModerador" class="form-text"></small>
+                    </div>
+                </form>
+            </div>
+
+          
+            <div class="modal-footer justify-content-center border-0">
+                <button type="submit" id="btnGuardarSesion" form="formNuevaSesion" class="btn btn-primary" style="background-color: #6a5acd; border-color: #6a5acd;">Guardar Sesión</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<style>
+    .card-sesion {
+        border-left: 5px solid #4CAF50;
+    }
+
+    .bg-light-green {
+        background-color: #f0fff0 !important;
+    }
+
+    .input-group-text {
+        transition: all 0.3s ease;
+    }
+
+    .moderador-valido {
+        border-color: #28a745 !important;
+        background-color: #d4edda !important;
+    }
+
+    .moderador-invalido {
+        border-color: #dc3545 !important;
+        background-color: #f8d7da !important;
+    }
+
+    .fecha-invalida {
+        border-color: #dc3545 !important;
+    }
+
+    .mensaje-error-fecha {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: none;
+    }
+
+    .is-invalid {
+        border-color: #dc3545 !important;
+        animation: shake 0.5s;
+    }
+
+    @@keyframes shake {
+        0%, 100% {
+            transform: translateX(0);
+        }
+
+        25% {
+            transform: translateX(-5px);
+        }
+
+        75% {
+            transform: translateX(5px);
+        }
+    }
+</style>
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.0/js/bootstrap.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        
+        let eventoFechaMin, eventoFechaMax, eventoHoraMin, eventoHoraMax;
+        let moderadorValido = false;
+        let usuarioModeradorId = null;
+        let fechasValidas = true; 
+        let hayConflictoHorarioSesion = false;
+
+      
+        function formatTime12h(time24) {
+            const [hours, minutes] = time24.split(':').map(Number);
+            const suffix = hours >= 12 ? 'PM' : 'AM';
+            const hour12 = hours % 12 || 12;
+            const minuteStr = minutes.toString().padStart(2, '0');
+            return `${hour12}:${minuteStr} ${suffix}`;
+        }
+
+     
+        function generarTodasLasHoras() {
+            const horas = [];
+            for (let h = 0; h < 24; h++) {
+                for (let m = 0; m < 60; m += 30) {
+                    const hour24 = h.toString().padStart(2, '0');
+                    const minute24 = m.toString().padStart(2, '0');
+                    const value24 = `${hour24}:${minute24}`;
+                    horas.push(value24);
+                }
+            }
+            return horas;
+        }
+
+       
+        function actualizarEstadoBotonSesion() {
+            if (hayConflictoHorarioSesion) {
+                $('#btnGuardarSesion').prop('disabled', true);
+                $('#btnGuardarSesion').addClass('disabled');
+                $('#btnGuardarSesion').css({
+                    'opacity': '0.5',
+                    'cursor': 'not-allowed'
+                });
+                $('#btnGuardarSesion').attr('title', 'No se puede guardar porque hay un conflicto de horario');
+            } else {
+                $('#btnGuardarSesion').prop('disabled', false);
+                $('#btnGuardarSesion').removeClass('disabled');
+                $('#btnGuardarSesion').css({
+                    'opacity': '1',
+                    'cursor': 'pointer'
+                });
+                $('#btnGuardarSesion').attr('title', '');
+            }
+        }
+
+      
+        function validarConflictoSesion() {
+            const fechaInicio = $('#fechaInicio').val();
+            const horaInicio = $('#horaInicio').val();
+            const fechaFin = $('#fechaFin').val();
+            const horaFin = $('#horaFin').val();
+
+            if (!fechaInicio || !horaInicio || !fechaFin || !horaFin) {
+                return Promise.resolve({ tieneConflicto: false });
+            }
+
+            return $.ajax({
+                url: '/Admin/ValidarConflictoSesion',
+                type: 'GET',
+                data: {
+                    fechaInicio: fechaInicio,
+                    horaInicio: horaInicio,
+                    fechaFin: fechaFin,
+                    horaFin: horaFin
+                }
+            }).then(function (data) {
+                return data;
+            }).catch(function (error) {
+                console.error('Error al validar conflicto de sesión:', error);
+                return { tieneConflicto: false };
+            });
+        }
+
+      
+        let timeoutValidacionSesion = null;
+
+        function validarConflictoEnTiempoReal() {
+            clearTimeout(timeoutValidacionSesion);
+
+            timeoutValidacionSesion = setTimeout(function () {
+                const fechaInicio = $('#fechaInicio').val();
+                const horaInicio = $('#horaInicio').val();
+                const fechaFin = $('#fechaFin').val();
+                const horaFin = $('#horaFin').val();
+
+                if (fechaInicio && horaInicio && fechaFin && horaFin) {
+                    validarConflictoSesion().then(function (resultado) {
+                        hayConflictoHorarioSesion = resultado.tieneConflicto;
+
+                        if (resultado.tieneConflicto) {
+                            mostrarMensajeConflictoSesion(resultado.mensaje);
+                        } else {
+                            ocultarMensajeConflictoSesion();
+                        }
+
+                        actualizarEstadoBotonSesion();
+                    });
+                } else {
+                    ocultarMensajeConflictoSesion();
+                    hayConflictoHorarioSesion = false;
+                    actualizarEstadoBotonSesion();
+                }
+            }, 500);
+        }
+
+       
+        function mostrarMensajeConflictoSesion(mensaje) {
+            let mensajeDiv = $('#mensajeConflictoHorarioSesion');
+
+            if (mensajeDiv.length === 0) {
+                mensajeDiv = $('<div id="mensajeConflictoHorarioSesion" class="alert alert-danger mt-2" style="display: none;"></div>');
+                $('#fechaFin').closest('.row').after(mensajeDiv);
+            }
+
+            mensajeDiv.html('<i class="fas fa-exclamation-triangle"></i> <strong>Conflicto de horario:</strong> ' + mensaje);
+            mensajeDiv.show();
+        }
+
+       
+        function ocultarMensajeConflictoSesion() {
+            const mensajeDiv = $('#mensajeConflictoHorarioSesion');
+            if (mensajeDiv.length > 0) {
+                mensajeDiv.hide();
+            }
+        }
+
+       
+        function validarFechasSesion() {
+            const fechaInicio = $('#fechaInicio').val();
+            const fechaFin = $('#fechaFin').val();
+
+            if (fechaInicio && fechaFin) {
+                if (fechaFin < fechaInicio) {
+                    $('#fechaFin').addClass('fecha-invalida');
+                    $('#mensajeErrorFechaFinSesion').show();
+                    fechasValidas = false;
+                } else {
+                    $('#fechaFin').removeClass('fecha-invalida');
+                    $('#mensajeErrorFechaFinSesion').hide();
+                    fechasValidas = true;
+                }
+            } else {
+                $('#fechaFin').removeClass('fecha-invalida');
+                $('#mensajeErrorFechaFinSesion').hide();
+                fechasValidas = true;
+            }
+        }
+
+       
+        function poblarHoraInicio() {
+            const fechaInicio = $('#fechaInicio').val();
+            const selectHoraInicio = $('#horaInicio');
+            const horaActual = selectHoraInicio.val();
+
+            selectHoraInicio.empty();
+            selectHoraInicio.append('<option value="">-- Seleccionar hora --</option>');
+
+            if (!fechaInicio) return;
+
+            const todasLasHoras = generarTodasLasHoras();
+            let horaMinPermitida = eventoHoraMin;
+            let horaMaxPermitida = eventoHoraMax;
+
+            todasLasHoras.forEach(hora => {
+                if (hora >= horaMinPermitida && hora <= horaMaxPermitida) {
+                    const option = $('<option></option>')
+                        .val(hora)
+                        .text(formatTime12h(hora));
+                    selectHoraInicio.append(option);
+                }
+            });
+
+            if (horaActual && selectHoraInicio.find(`option[value="${horaActual}"]`).length > 0) {
+                selectHoraInicio.val(horaActual);
+            } else {
+                const primeraOpcion = selectHoraInicio.find('option:not([value=""])').first().val();
+                if (primeraOpcion) {
+                    selectHoraInicio.val(primeraOpcion);
+                }
+            }
+
+            poblarHoraFin();
+        }
+
+      
+        function poblarHoraFin() {
+            const fechaInicio = $('#fechaInicio').val();
+            const horaInicio = $('#horaInicio').val();
+            const fechaFin = $('#fechaFin').val();
+            const selectHoraFin = $('#horaFin');
+            const horaActual = selectHoraFin.val();
+
+            selectHoraFin.empty();
+            selectHoraFin.append('<option value="">-- Seleccionar hora --</option>');
+
+            if (!fechaFin || !horaInicio) return;
+
+            const todasLasHoras = generarTodasLasHoras();
+            const [h, m] = horaInicio.split(':').map(Number);
+            let siguienteHora = h;
+            let siguienteMin = m + 30;
+
+            if (siguienteMin >= 60) {
+                siguienteMin = 0;
+                siguienteHora = (h + 1) % 24;
+            }
+
+            let horaMinPermitida = `${siguienteHora.toString().padStart(2, '0')}:${siguienteMin.toString().padStart(2, '0')}`;
+            let horaMaxPermitida = eventoHoraMax;
+
+            if (fechaInicio === fechaFin) {
+               
+                todasLasHoras.forEach(hora => {
+                    if (hora >= horaMinPermitida && hora <= horaMaxPermitida) {
+                        const option = $('<option></option>')
+                            .val(hora)
+                            .text(formatTime12h(hora));
+                        selectHoraFin.append(option);
+                    }
+                });
+            } else {
+               
+                todasLasHoras.forEach(hora => {
+                    if (hora >= eventoHoraMin && hora <= horaMaxPermitida) {
+                        const option = $('<option></option>')
+                            .val(hora)
+                            .text(formatTime12h(hora));
+                        selectHoraFin.append(option);
+                    }
+                });
+            }
+
+            if (horaActual && selectHoraFin.find(`option[value="${horaActual}"]`).length > 0) {
+                selectHoraFin.val(horaActual);
+            } else {
+                const primeraOpcion = selectHoraFin.find('option:not([value=""])').first().val();
+                if (primeraOpcion) {
+                    selectHoraFin.val(primeraOpcion);
+                }
+            }
+        }
+
+        $(document).on('click', '.boton-agregar-sesion', function () {
+            const fechaInicioEvento = $('#eventFechaInicio').val();
+            const horaInicioEvento = $('#eventHoraInicio').val();
+            const fechaFinEvento = $('#eventFechaFin').val();
+            const horaFinEvento = $('#eventHoraFin').val();
+
+            eventoFechaMin = fechaInicioEvento;
+            eventoFechaMax = fechaFinEvento;
+            eventoHoraMin = horaInicioEvento;
+            eventoHoraMax = horaFinEvento;
+
+            limpiarCamposModal();
+
+            $('#fechaInicio').attr('min', fechaInicioEvento);
+            $('#fechaInicio').attr('max', fechaFinEvento);
+            $('#fechaFin').attr('min', fechaInicioEvento);
+            $('#fechaFin').attr('max', fechaFinEvento);
+
+            $('#fechaInicio').val(fechaInicioEvento);
+            $('#fechaFin').val(fechaFinEvento);
+
+            $('#nuevaSesionModal').modal('show');
+            poblarHoraInicio();
+            poblarHoraFin();
+
+            $('#horaInicio').val(horaInicioEvento);
+            $('#horaFin').val(horaFinEvento);
+
+           
+            moderadorValido = false;
+            usuarioModeradorId = null;
+            fechasValidas = true;
+            $('#moderadorSesion').val('').removeClass('moderador-valido moderador-invalido');
+            $('#mensajeValidacionModerador').text('');
+            $('#fechaFin').removeClass('fecha-invalida');
+            $('#mensajeErrorFechaFinSesion').hide();
+            ocultarMensajeConflictoSesion();
+
+            actualizarEstadoBotonSesion();
+
+            $('#nuevaSesionModal').modal('show');
+        });
+
+       
+        $('#fechaInicio').on('change', function () {
+            poblarHoraInicio();
+            const fechaInicio = $(this).val();
+            $('#fechaFin').attr('min', fechaInicio);
+            const fechaFin = $('#fechaFin').val();
+
+          
+            if (fechaFin && fechaFin < fechaInicio) {
+                $('#fechaFin').val('');
+                $('#fechaFin').addClass('fecha-invalida');
+                $('#mensajeErrorFechaFinSesion').show();
+                fechasValidas = false;
+            }
+
+            validarFechasSesion();
+            poblarHoraFin();
+            validarConflictoEnTiempoReal(); 
+        });
+
+      
+        $('#fechaFin').on('change', function () {
+            validarFechasSesion();
+            poblarHoraFin();
+            validarConflictoEnTiempoReal(); 
+        });
+
+      
+        $('#horaInicio').on('change', function () {
+            poblarHoraFin();
+            validarConflictoEnTiempoReal(); 
+        });
+
+        $('#horaFin').on('change', function () {
+            validarConflictoEnTiempoReal(); 
+        });
+
+   
+        $('#btnBuscarModerador').on('click', function () {
+            const correo = $('#moderadorSesion').val().trim();
+
+            if (!correo) {
+                alert('Por favor ingrese un correo');
+                return;
+            }
+
+           
+            $.ajax({
+                url: '/Admin/ValidarModerador',
+                type: 'GET',
+                data: { correo: correo },
+                success: function (data) {
+                    if (data.existe) {
+                        $('#moderadorSesion').removeClass('moderador-invalido').addClass('moderador-valido');
+                        $('#mensajeValidacionModerador').removeClass('text-danger').addClass('text-success');
+                        $('#mensajeValidacionModerador').text('✓ Moderador encontrado');
+                        moderadorValido = true;
+                        usuarioModeradorId = data.usuarioId;
+                    } else {
+                        $('#moderadorSesion').removeClass('moderador-valido').addClass('moderador-invalido');
+                        $('#mensajeValidacionModerador').removeClass('text-success').addClass('text-danger');
+                        $('#mensajeValidacionModerador').text('✗ No existe un usuario activo con este correo');
+                        moderadorValido = false;
+                        usuarioModeradorId = null;
+                    }
+                },
+                error: function (error) {
+                    console.error('Error:', error);
+                    alert('Error al validar el moderador');
+                }
+            });
+        });
+
+      
+        $('#moderadorSesion').on('input', function () {
+            $(this).removeClass('moderador-valido moderador-invalido');
+            $('#mensajeValidacionModerador').text('');
+            moderadorValido = false;
+            usuarioModeradorId = null;
+        });
+
+       
+        function mostrarAlerta(mensaje, campo) {
+            alert(mensaje);
+            if (campo) {
+                campo.focus();
+                campo.addClass('is-invalid');
+                setTimeout(() => campo.removeClass('is-invalid'), 3000);
+            }
+        }
+
+       
+        function mostrarAlertaSuccess(mensaje) {
+            const alertaExistente = $('.alerta-temporal');
+            if (alertaExistente.length > 0) {
+                alertaExistente.remove();
+            }
+
+            const alerta = $('<div class="alert alert-success alert-dismissible fade show alerta-temporal" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;">' +
+                mensaje +
+                '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                '<span aria-hidden="true">&times;</span>' +
+                '</button>' +
+                '</div>');
+
+            $('body').append(alerta);
+
+            setTimeout(function () {
+                alerta.fadeOut(function () {
+                    $(this).remove();
+                });
+            }, 3000);
+        }
+
+     
+        function verificarCapacidadDisponible(capacidadSesion) {
+            const capacidadMaxima = parseInt($('#CapacidadMaxima').val()) || 0;
+
+            if (capacidadMaxima <= 0) {
+                return Promise.resolve({ disponible: 0, error: 'Primero debe definir la capacidad máxima del evento' });
+            }
+
+          
+            return new Promise((resolve) => {
+                $.ajax({
+                    url: '/Admin/ObtenerSesionesTemp',
+                    type: 'GET',
+                    success: function (response) {
+                        let capacidadUsada = 0;
+
+                        if (response.success && response.sesiones && response.sesiones.length > 0) {
+                            response.sesiones.forEach(sesion => {
+                                capacidadUsada += parseInt(sesion.Capacidad) || 0;
+                            });
+                        }
+
+                        const capacidadDisponible = capacidadMaxima - capacidadUsada;
+
+                        if (capacidadSesion > capacidadDisponible) {
+                            resolve({
+                                disponible: capacidadDisponible,
+                                error: `Capacidad insuficiente. Disponible: ${capacidadDisponible}, Solicitada: ${capacidadSesion}`
+                            });
+                        } else {
+                            resolve({
+                                disponible: capacidadDisponible,
+                                error: null
+                            });
+                        }
+                    },
+                    error: function (error) {
+                        console.error('Error al obtener sesiones:', error);
+                        resolve({
+                            disponible: 0,
+                            error: 'Error al verificar capacidad disponible'
+                        });
+                    }
+                });
+            });
+        }
+
+
+
+       
+        $('#capacidadSesion').on('input', function () {
+            const capacidadSesion = parseInt($(this).val()) || 0;
+
+            verificarCapacidadDisponible(capacidadSesion).then(function (resultado) {
+                if (resultado.error) {
+                    $(this).addClass('is-invalid');
+                    $('#mensajeErrorCapacidad').text(resultado.error).show();
+                } else {
+                    $(this).removeClass('is-invalid');
+                    $('#mensajeErrorCapacidad').hide();
+                }
+            }.bind(this));
+        });
+
+       
+        $('#CapacidadMaxima').on('input', function () {
+            actualizarMensajeCapacidad();
+
+         
+            verificarCapacidadDisponible(0).then(function (resultado) {
+                const capacidadMaxima = parseInt($(this).val()) || 0;
+                const capacidadUsada = capacidadMaxima - resultado.disponible;
+
+                if (capacidadUsada > capacidadMaxima) {
+                    $('#mensajeCapacidadGlobal').addClass('text-danger')
+                        .text(`ADVERTENCIA: Las sesiones existentes (${capacidadUsada}) exceden la nueva capacidad máxima (${capacidadMaxima})`);
+                } else {
+                    actualizarMensajeCapacidad();
+                }
+            }.bind(this));
+        });
+
+       
+        $('#btnGuardarSesion').on('click', function (e) {
+            e.preventDefault();
+
+           
+            if (hayConflictoHorarioSesion) {
+                mostrarAlerta('⚠️ No se puede guardar la sesión porque ya existe otra sesión con las mismas fechas y horarios.\n\nPor favor modifique las fechas o las horas de la sesión.');
+                return false;
+            }
+
+           
+            const titulo = $('#tituloSesion').val().trim();
+            if (!titulo) {
+                mostrarAlerta('Por favor ingrese el título de la sesión', $('#tituloSesion'));
+                return false;
+            }
+
+            const tipo = $('#tipoSesion').val().trim();
+            if (!tipo) {
+                mostrarAlerta('Por favor ingrese el tipo de sesión', $('#tipoSesion'));
+                return false;
+            }
+
+            const descripcion = $('#descripcionSesion').val().trim();
+            if (!descripcion) {
+                mostrarAlerta('Por favor ingrese la descripción de la sesión', $('#descripcionSesion'));
+                return false;
+            }
+
+            const fechaInicio = $('#fechaInicio').val();
+            if (!fechaInicio) {
+                mostrarAlerta('Por favor seleccione la fecha de inicio', $('#fechaInicio'));
+                return false;
+            }
+
+            const horaInicio = $('#horaInicio').val();
+            if (!horaInicio) {
+                mostrarAlerta('Por favor seleccione la hora de inicio', $('#horaInicio'));
+                return false;
+            }
+
+            const fechaFin = $('#fechaFin').val();
+            if (!fechaFin) {
+                mostrarAlerta('Por favor seleccione la fecha de fin', $('#fechaFin'));
+                return false;
+            }
+
+            const horaFin = $('#horaFin').val();
+            if (!horaFin) {
+                mostrarAlerta('Por favor seleccione la hora de fin', $('#horaFin'));
+                return false;
+            }
+
+            
+            if (!fechasValidas) {
+                mostrarAlerta('La fecha de fin debe ser posterior a la fecha de inicio', $('#fechaFin'));
+                return false;
+            }
+
+            const ubicacion = $('#ubicacionSesion').val().trim();
+            if (!ubicacion) {
+                mostrarAlerta('Por favor ingrese la ubicación de la sesión', $('#ubicacionSesion'));
+                return false;
+            }
+
+            const capacidad = $('#capacidadSesion').val();
+            if (!capacidad || capacidad <= 0) {
+                mostrarAlerta('Por favor ingrese una capacidad válida (mayor a 0)', $('#capacidadSesion'));
+                return false;
+            }
+
+            const correoModerador = $('#moderadorSesion').val().trim();
+            if (!correoModerador) {
+                mostrarAlerta('Por favor ingrese el correo del moderador', $('#moderadorSesion'));
+                return false;
+            }
+
+           
+            if (!moderadorValido || !usuarioModeradorId) {
+                mostrarAlerta('Por favor valide el correo del moderador usando el botón de búsqueda', $('#moderadorSesion'));
+                return false;
+            }
+
+            
+            const inicioSesion = new Date(fechaInicio + 'T' + horaInicio);
+            const finSesion = new Date(fechaFin + 'T' + horaFin);
+            const inicioEvento = new Date(eventoFechaMin + 'T' + eventoHoraMin);
+            const finEvento = new Date(eventoFechaMax + 'T' + eventoHoraMax);
+
+            if (inicioSesion < inicioEvento || finSesion > finEvento) {
+                mostrarAlerta('La sesión debe estar completamente dentro del rango del evento');
+                return false;
+            }
+
+            if (inicioSesion >= finSesion) {
+                mostrarAlerta('La fecha y hora de fin debe ser posterior a la de inicio');
+                return false;
+            }
+
+            
+            verificarCapacidadDisponible(parseInt(capacidad)).then(function (resultado) {
+                if (resultado.error) {
+                    mostrarAlerta(resultado.error, $('#capacidadSesion'));
+                    return false;
+                }
+
+              
+                const datosSesion = {
+                    Titulo: titulo,
+                    Tipo: tipo,
+                    Descripcion: descripcion,
+                    FechaInicio: fechaInicio,
+                    HoraInicio: horaInicio,
+                    FechaFin: fechaFin,
+                    HoraFin: horaFin,
+                    Ubicacion: ubicacion,
+                    Capacidad: parseInt(capacidad),
+                    CorreoModerador: correoModerador,
+                    UsuarioModeradorId: usuarioModeradorId
+                };
+
+               
+                
+                $.ajax({
+                    url: '/Admin/GuardarSesionTemp',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(datosSesion),
+                    success: function (response) {
+                       
+                        if (response.success) {
+                            mostrarAlertaSuccess('Sesión guardada correctamente');
+                            limpiarCamposModal();
+                            $('#nuevaSesionModal').modal('hide');
+                            $('#formNuevaSesion').trigger('reset');
+                            moderadorValido = false;
+                            usuarioModeradorId = null;
+                            fechasValidas = true;
+                            $('#moderadorSesion').removeClass('moderador-valido moderador-invalido');
+                            $('#mensajeValidacionModerador').text('');
+                            $('#fechaFin').removeClass('fecha-invalida');
+                            $('#mensajeErrorFechaFinSesion').hide();
+
+                            setTimeout(function () {
+                                cargarSesionesGuardadas();
+                                actualizarMensajeCapacidad();
+                            }, 300);
+                        } else {
+                            mostrarAlerta('Error al guardar la sesión: ' + response.mensaje);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error al guardar sesión:', error);
+                        mostrarAlerta('Error al guardar la sesión. Por favor, intente nuevamente.');
+                    }
+                });
+            });
+        });
+    });
+
+    function limpiarCamposModal() {
+       
+        $('#tituloSesion').val('');
+        $('#descripcionSesion').val('');
+        $('#tipoSesion').val('');
+        $('#ubicacionSesion').val('');
+        $('#capacidadSesion').val('');
+        $('#correoModerador').val('');
+
+        const fechaInicioEvento = $('#eventFechaInicio').val();
+        const horaInicioEvento = $('#eventHoraInicio').val();
+        const fechaFinEvento = $('#eventFechaFin').val();
+        const horaFinEvento = $('#eventHoraFin').val();
+
+        $('#fechaInicio').val(fechaInicioEvento);
+        $('#horaInicio').val(horaInicioEvento);
+        $('#fechaFin').val(fechaFinEvento);
+        $('#horaFin').val(horaFinEvento);
+
+      
+        $('.text-danger').remove();
+        $('.is-invalid').removeClass('is-invalid');
+    }
+
+    $('#nuevaSesionModal').on('hidden.bs.modal', function () {
+       
+        limpiarCamposModal();
+    });
+</script>

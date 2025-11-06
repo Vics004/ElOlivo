@@ -1,0 +1,119 @@
+﻿
+<div class="modal fade" id="modalTipoActividad" tabindex="-1" role="dialog" aria-labelledby="modalTipoActividadLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content" style="border-radius: 15px; border: none;">
+            <div class="modal-header" style="border-bottom: none; padding: 25px 25px 10px 25px;">
+                <h5 class="modal-title" id="modalTipoActividadLabel" style="color: #5abf73; font-weight: 600; font-size: 1.2rem;">
+                    Nuevo Tipo de Actividad
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="outline: none;">
+                    <span aria-hidden="true" style="color: #ccc; font-size: 1.5rem;">&times;</span>
+                </button>
+            </div>
+
+            <form id="formTipoActividad">
+                <div class="modal-body" style="padding: 20px 25px;">
+
+                 
+                    <div class="form-group">
+                        <label for="nombreTipoActividad" style="font-weight: 600; color: #333; font-size: 0.9rem;">Nombre</label>
+                        <input type="text"
+                               class="form-control"
+                               id="nombreTipoActividad"
+                               name="nombre"
+                               placeholder="Ingrese el nombre del tipo de actividad"
+                               required
+                               style="border-radius: 8px; border: 1px solid #ced4da; padding: 10px 15px;">
+                    </div>
+
+                    
+                    <div class="form-group">
+                        <label for="descripcionTipoActividad" style="font-weight: 600; color: #333; font-size: 0.9rem;">Descripción</label>
+                        <textarea class="form-control"
+                                  id="descripcionTipoActividad"
+                                  name="descripcion"
+                                  rows="3"
+                                  placeholder="Describa brevemente este tipo de actividad"
+                                  style="border-radius: 8px; border: 1px solid #ced4da; padding: 10px 15px; resize: vertical;"></textarea>
+                    </div>
+
+                   
+                    <input type="hidden" id="tipoActividadId" name="tipoactividadoid" value="">
+                </div>
+
+                <div class="modal-footer" style="border-top: none; padding: 10px 25px 25px 25px; justify-content: flex-end;">
+                    <button type="submit"
+                            id="btnGuardarTipoActividad"
+                            class="btn btn-primary"
+                            style="background-color: #6c75fb; border-color: #6c75fb; font-weight: 600; padding: 10px 30px; border-radius: 8px;">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.0/js/bootstrap.min.js"></script>
+
+<script>
+    document.getElementById("btnGuardarTipoActividad").addEventListener("click", async (e) => {
+        e.preventDefault();
+        const nombre = document.getElementById("nombreTipoActividad").value.trim();
+        const descripcion = document.getElementById("descripcionTipoActividad").value.trim();
+
+        if (!nombre) {
+            alert("El nombre es obligatorio");
+            return;
+        }
+
+        const body = JSON.stringify({ nombre, descripcion });
+
+        const response = await fetch("/Admin/GuardarTipoActividadTemp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: body
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`✅ Tipo de actividad agregado temporalmente (total: ${data.total})`);
+
+            cargarListaTiposActividadTemp();
+        } else {
+            alert("❌ " + data.mensaje);
+        }
+    });
+
+    async function cargarListaTiposActividadTemp() {
+        const response = await fetch("/Admin/ObtenerTiposActividadTemp");
+        const tipos = await response.json();
+
+        const lista = document.querySelector(".actividades-lista");
+        lista.innerHTML = "";
+
+        if (tipos.length === 0) {
+            lista.innerHTML = `<div class="mensaje-vacio">
+                <p>No hay tipos de actividades agregados aún</p>
+                <small>Haz clic en "Agregar tipo de actividad" para comenzar</small>
+            </div>`;
+            return;
+        }
+
+        tipos.forEach(tipo => {
+            lista.innerHTML += `
+                <div class="card-sesion">
+                    <div class="titulo-card">${tipo.nombre}</div>
+                    <div class="fecha-card">${tipo.descripcion}</div>
+                </div>
+            `;
+        });
+    }
+
+
+</script>
+
