@@ -445,22 +445,92 @@ namespace ElOlivo.Controllers
             }
         }
 
+        public IActionResult Ver_Mas2(int idEvento) // id puede ser sesionid o eventoid
+        {
+            try
+            {
+                var usuarioId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioId == null)
+                    return RedirectToAction("Autenticar", "Login");
+
+
+
+
+
+                var inscripcion = _elOlivoDbContext.inscripcion
+                    .FirstOrDefault(i => i.eventoid == idEvento && i.usuarioid == usuarioId);
+
+
+
+                //Obtener estado para etiqueta
+                var inscripcionConEstado = (from i in _elOlivoDbContext.inscripcion
+                                            join est in _elOlivoDbContext.estado
+                                                on i.estadoid equals est.estadoid
+                                            where i.eventoid == idEvento && i.usuarioid == usuarioId
+                                            select new
+                                            {
+                                                inscripcion = i,
+                                                estadoNombre = est.nombre
+                                            }).FirstOrDefault();
+
+                //Obtener información para mostrar las sesiones con sus actividades
+                var evento = _elOlivoDbContext.evento.FirstOrDefault(e => e.eventoid == idEvento);
+
+                var sesiones = (from s in _elOlivoDbContext.sesion
+                                where s.eventoid == idEvento && s.activo == true
+                                orderby s.fecha_inicio
+                                select new
+                                {
+                                    s.sesionid,
+                                    s.titulo,
+                                    s.descripcion,
+                                    s.fecha_inicio,
+                                    s.fecha_fin,
+                                    actividades = (from a in _elOlivoDbContext.actividad
+                                                   join u in _elOlivoDbContext.usuario on a.ponenteid equals u.usuarioid
+                                                   where a.sesionid == s.sesionid && a.activo == true
+                                                   orderby a.hora_inicio
+                                                   select new
+                                                   {
+                                                       a.agendaid,
+                                                       a.nombre,
+                                                       a.descripcion,
+                                                       a.hora_inicio,
+                                                       a.hora_fin,
+                                                       ponenteNombre = u.nombre + " " + u.apellido
+                                                   }).ToList()
+                                }).ToList();
+
+                ViewBag.Evento = evento;
+                ViewBag.Sesiones = sesiones;
+                ViewBag.InscripcionEstado =
+                    inscripcionConEstado == null
+                    ? "Cancelado"
+                    : (inscripcionConEstado.estadoNombre == "Inscrito" ? "Confirmada"
+                    : (inscripcionConEstado.estadoNombre == "Pendiente" ? "En proceso"
+                    : inscripcionConEstado.estadoNombre));
+
+
+
+                return View("Ver_Mas");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en Ver_Mas");
+                return RedirectToAction("Inscripciones");
+            }
+        }
+
         //NUEVO
 
 
 
         public IActionResult Ver_Sesiones()
         {
-
-
-
             return View();
         }
         public IActionResult Ver_SesionesPersonales()
         {
-
-
-
             return View();
         }
 
@@ -490,7 +560,8 @@ namespace ElOlivo.Controllers
                 end = e.fecha_fin.HasValue
                     ? e.fecha_fin.Value.ToString("yyyy-MM-ddTHH:mm:ss")
                     : null,
-                color = "#007bff",
+                color = "#28a745", // Verde para sesiones
+                textColor = "white",
                 allDay= false
             });
 
@@ -511,13 +582,35 @@ namespace ElOlivo.Controllers
                 end = e.fecha_fin.HasValue
                     ? e.fecha_fin.Value.ToString("yyyy-MM-ddTHH:mm:ss")
                     : null,
-                color = "#007bff",
+                color = "#28a745", // Verde para sesiones
+                textColor = "white",
                 allDay = false
             });
 
             return Json(data);
         }
 
+
+        public IActionResult InfoActividad(int id)
+        {
+            var actividad = (from a in _elOlivoDbContext.actividad
+                             join u in _elOlivoDbContext.usuario on a.ponenteid equals u.usuarioid
+                             join ta in _elOlivoDbContext.tipoactividad on a.tipoactividadid equals ta.tipoactividadid
+                             where a.agendaid == id
+                             select new
+                             {
+                                 Nombre= a.nombre,
+                                 Descripcion= a.descripcion,
+                                 Inicio= a.hora_inicio.Value.ToString("h:mm tt", new System.Globalization.CultureInfo("es-ES")),
+                                 Fin= a.hora_fin,
+                                 Ponente= u.nombre + " " + u.apellido,
+                                 Actividad= ta.nombre,
+                                 Estado = a.activo
+                             }).FirstOrDefault();
+            ViewBag.Actividad = actividad;
+
+            return View();
+        }
 
 
 

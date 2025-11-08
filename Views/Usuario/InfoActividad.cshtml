@@ -1,0 +1,122 @@
+﻿@{
+    Layout = "_Layout_Usuario";
+    ViewData["Title"] = "Detalle de Actividad";
+    var actividad = ViewBag.Actividad;
+    var Estado=""; 
+    if (actividad.Estado) { Estado = "Disponible"; }
+	else { Estado = "Cancelado"; }
+
+}
+
+<div class="evento-container">
+
+    <!-- Información general -->
+    <div class="sesion-header">
+        <div class="evento-titulo">Actividad</div>
+        <div class="fecha-hora">
+            <span class="badge-estado badge-confirmada">@Estado</span>
+            <span class="fecha-badge">@actividad.Inicio</span>
+        </div>
+    </div>
+
+    <!-- Descripción -->
+    <div class="sesion-titulo">Demostración interactiva de IA</div>
+    <div class="sesion-descripcion">
+        @actividad.Descripcion
+    </div>
+
+    <!-- Ponente -->
+    <div class="ponente-info" style="color: #1f2937;">
+		<strong>Ponente:</strong> @actividad.Ponente
+    </div>
+
+    <!-- Links -->
+    <div style="margin-top: 20px;">
+       
+    </div>
+
+    <!-- Archivos adjuntos -->
+    <div style="margin-top: 25px;">
+        <p><strong>Archivos adjuntos:</strong></p>
+        <div style="display: flex; align-items: center; gap: 15px;">
+
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .evento-container {
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        max-width: 1400px;
+        margin: 20px auto;
+    }
+
+    .badge-estado {
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .badge-confirmada {
+        background-color: #6366f1;
+    }
+
+    .fecha-badge {
+        background-color: #28a745;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 500;
+        display: inline-block;
+        transition: transform 0.2s ease;
+        border: none;
+    }
+
+        .fecha-badge:hover {
+            transform: scale(1.1);
+        }
+
+    .evento-titulo {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 15px;
+    }
+
+    .sesion-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .sesion-titulo {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 10px;
+    }
+
+    .sesion-descripcion {
+        color: #6b7280;
+        font-size: 15px;
+        line-height: 1.6;
+        margin-bottom: 20px;
+    }
+
+    a {
+        color: #2563eb;
+        text-decoration: none;
+    }
+
+        a:hover {
+            text-decoration: underline;
+        }
+</style>
