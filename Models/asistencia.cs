@@ -5,7 +5,8 @@ namespace ElOlivo.Models
     public class asistencia
     {
         [Key]
-        public int asistenciaId { get; set; }
+        
+        public int asistenciaid { get; set; }
         public DateTime? fecha_hora_registro { get; set; }
         public int? usuarioid { get; set; }
         public int? sesionid { get; set; }

@@ -1,0 +1,78 @@
+﻿@* Views/Admin/PerfilUsuarioSoloLectura.cshtml *@
+@using Microsoft.AspNetCore.Http
+@* Utiliza el layout de administrador *@
+@{
+    Layout = "_Layout_Admin";
+    ViewData["Title"] = "Perfil del Usuario";
+    var usuario = ViewBag.Usuario;
+}
+
+<link rel="stylesheet" href="~/css/Tablas.css" /> @* Asumo que tiene estilos relevantes aquí *@
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center p-4">
+                    <div class="avatar-section mb-4">
+                        @if (!string.IsNullOrEmpty(usuario.foto_url))
+                        {
+                            <img src="@usuario.foto_url" alt="Foto de perfil"
+                                 class="rounded-circle img-fluid"
+                                 style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #e9ecef;">
+                        }
+                        else
+                        {
+                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto"
+                                 style="width: 150px; height: 150px; border: 4px solid #e9ecef;">
+                                <i class="fas fa-user fa-4x text-muted"></i>
+                            </div>
+                        }
+                    </div>
+
+                    <h4 class="mb-1">@usuario.nombre @usuario.apellido</h4>
+                    <p class="text-muted mb-0">Rol: @usuario.RolNombre</p>
+                </div>
+            </div>
+
+            <a onclick="history.back();" class="btn btn-secondary mt-3 w-100">Volver a Inscripciones</a>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0 section-title">Datos Personales</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6 info-item">
+                            <p class="info-label">Nombre Completo</p>
+                            <p class="info-value">@usuario.nombre @usuario.apellido</p>
+                        </div>
+                        <div class="col-md-6 info-item">
+                            <p class="info-label">Correo Electrónico</p>
+                            <p class="info-value">@usuario.email</p>
+                        </div>
+                        <div class="col-md-6 info-item">
+                            <p class="info-label">Teléfono</p>
+                            <p class="info-value">@(usuario.telefono ?? "N/A")</p>
+                        </div>
+                        <div class="col-md-6 info-item">
+                            <p class="info-label">País</p>
+                            <p class="info-value">@(usuario.pais ?? "N/A")</p>
+                        </div>
+                        <div class="col-md-6 info-item">
+                            <p class="info-label">Institución</p>
+                            <p class="info-value">@(usuario.institucion ?? "N/A")</p>
+                        </div>
+                        <div class="col-md-6 info-item">
+                            <p class="info-label">Fecha de Registro</p>
+                            <p class="info-value">@(usuario.fecha_registro?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

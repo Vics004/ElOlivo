@@ -1,6 +1,12 @@
-using Microsoft.EntityFrameworkCore;
 using ElOlivo.Models;
 using ElOlivo.Servicios;
+using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml;
+using QuestPDF.Infrastructure;
+using System.ComponentModel;
+
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
