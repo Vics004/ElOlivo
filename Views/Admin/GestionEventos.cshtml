@@ -52,6 +52,40 @@
 
             events: '/Admin/GetEventos',
 
+
+            dateClick: function (info) {
+                var vistaMes = calendar.view.currentStart.getMonth();
+                var vistaAnio = calendar.view.currentStart.getFullYear();
+
+                var clickMes = info.date.getMonth();
+                var clickAnio = info.date.getFullYear();
+
+                if (clickMes === vistaMes && clickAnio === vistaAnio) {
+
+                    
+                    var fecha = info.dateStr.substring(0, 10); 
+
+                    
+                    var hora = '';
+                    if (info.dateStr.includes('T')) {
+                       
+                        hora = FullCalendar.formatDate(info.date, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+                    }
+
+                  
+                    window.location.href = '/Admin/CrearEvento?fecha=' + fecha + '&hora=' + hora;
+                } else {
+                    
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Atención',
+                        text: 'Por favor seleccione un día del mes actual',
+                        confirmButtonText: 'Aceptar'
+                    });
+                }
+            },
+
+
             eventClick: function (info) {
                 info.jsEvent.preventDefault();
                 alert(
