@@ -329,3 +329,25 @@
     }
 
 }
+.comprobante-preview {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+}
+
+.comprobante-header {
+    background: linear-gradient(135deg, var(--verde-claro) 0%, var(--verde-secundario) 100%);
+    color: var(--blanco);
+}
+
+.card {
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    font-weight: 600;
+}
+
+.badge {
+    font-size: 0.8em;
+}

@@ -1,0 +1,254 @@
+﻿@model ElOlivo.Models.certificadoComp
+
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title">Certificado de Excelencia</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <div class="certificado-preview">
+        <!-- Encabezado estilo PDF -->
+        <div class="certificado-header text-center mb-3">
+            <h2 class="certificado-titulo">CERTIFICADO DE EXCELENCIA</h2>
+            <p class="certificado-subtitulo">Reconocimiento Académico</p>
+        </div>
+
+        <!-- Mensaje principal estilo PDF -->
+        <div class="certificado-mensaje text-center mb-4">
+            <p class="mensaje-otorgamiento">Se otorga este reconocimiento a:</p>
+            <h3 class="nombre-participante">@Model.NombreUsuario.ToUpper()</h3>
+            <p class="mensaje-logro">Por completar exitosamente:</p>
+            <h4 class="nombre-evento">@Model.EventoNombre</h4>
+        </div>
+
+        <!-- Línea decorativa -->
+        <div class="linea-decorativa mb-3"></div>
+
+        <!-- Información compacta en una sola tarjeta -->
+        <div class="card certificado-info">
+            <div class="card-header bg-light text-center">
+                <h6 class="mb-0">INFORMACIÓN DEL PROGRAMA</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Sesión:</strong><br>
+                        <span class="info-destacada">@Model.SesionTitulo</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Fecha:</strong><br>
+                        <span class="info-destacada">@(Model.FechaInicioSesion?.ToString("dd/MM/yyyy") ?? "N/A")</span>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <strong>Participante:</strong><br>
+                        <span class="info-destacada">@Model.NombreUsuario</span>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <strong>Institución:</strong><br>
+                        <span class="info-destacada">@Model.Institucion</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Estado:</strong><br>
+                        <span class="badge bg-success">@Model.Estado</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Código de verificación -->
+        <div class="codigo-verificacion text-center mt-3">
+            <p class="mb-1">
+                <strong>Código de verificación:</strong>
+                <span class="codigo-unico">@Model.CodigoUnico</span>
+            </p>
+            <small class="text-muted">Emitido el @DateTime.Now.ToString("dd/MM/yyyy")</small>
+        </div>
+
+        <!-- Mensaje final -->
+        <div class="mensaje-final text-center mt-3">
+            <p class="text-success mb-1"><strong>¡Felicidades por tu logro!</strong></p>
+            <small class="text-muted">Este certificado reconoce tu dedicación y excelencia académica</small>
+        </div>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn-cancelar" data-bs-dismiss="modal">Cancelar</button>
+    <a href="@Url.Action("DescargarCertificado", new { id = Model.CertificadoId })"
+       class="btn-descargar" target="_blank">
+        <i class="fas fa-download"></i> Descargar PDF
+    </a>
+</div>
+
+<style>
+    /* === CERTIFICADO - Estilos profesionales === */
+    .certificado-preview {
+        font-family: 'Arial', sans-serif;
+        line-height: 1.5;
+        color: #333;
+    }
+
+    .certificado-header {
+        border-bottom: 3px solid #2d7a4f;
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+        background: linear-gradient(135deg, #e8f5e9 0%, #f8fdf8 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+    }
+
+    .certificado-titulo {
+        color: #1b5e3a;
+        font-weight: 700;
+        font-size: 1.8rem;
+        margin-bottom: 0.3rem;
+        letter-spacing: 1px;
+    }
+
+    .certificado-subtitulo {
+        color: #2d7a4f;
+        font-size: 1rem;
+        font-style: italic;
+        margin-bottom: 0;
+    }
+
+    .certificado-mensaje {
+        padding: 1rem 0;
+    }
+
+    .mensaje-otorgamiento {
+        font-size: 1.1rem;
+        margin-bottom: 0.8rem;
+        color: #555;
+    }
+
+    .nombre-participante {
+        color: #1b5e3a;
+        font-weight: 700;
+        font-size: 1.5rem;
+        margin: 0.8rem 0;
+        letter-spacing: 0.5px;
+    }
+
+    .mensaje-logro {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+        color: #555;
+    }
+
+    .nombre-evento {
+        color: #2d7a4f;
+        font-weight: 600;
+        font-size: 1.3rem;
+        margin: 0.5rem 0;
+    }
+
+    .linea-decorativa {
+        height: 2px;
+        background: linear-gradient(90deg, transparent 0%, #4caf50 50%, transparent 100%);
+        margin: 0 auto;
+        width: 80%;
+    }
+
+    .certificado-info {
+        border: 2px solid #c8e6c9;
+        border-radius: 8px;
+        border-left: 4px solid #2d7a4f;
+    }
+
+    .certificado-info .card-header {
+        background: linear-gradient(135deg, #2d7a4f 0%, #1b5e3a 100%) !important;
+        color: #ffffff !important;
+        border-radius: 6px 6px 0 0 !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: none;
+        padding: 1rem;
+        font-size: 1rem;
+    }
+
+    .certificado-info .card-body {
+        padding: 1.2rem;
+    }
+
+    .info-destacada {
+        color: #1b5e3a;
+        font-weight: 600;
+    }
+
+    .codigo-verificacion {
+        background: #f8f9fa;
+        padding: 0.8rem;
+        border-radius: 6px;
+        border: 1px dashed #4caf50;
+    }
+
+    .codigo-unico {
+        color: #2d7a4f;
+        font-weight: 700;
+        font-family: 'Courier New', monospace;
+        font-size: 1.1rem;
+    }
+
+    .mensaje-final {
+        background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+        padding: 0.8rem;
+        border-radius: 6px;
+        border-left: 3px solid #4caf50;
+    }
+
+    /* === BOTONES (mantener existentes) === */
+    .btn-descargar {
+        background: linear-gradient(135deg, #4caf50 0%, #2d7a4f 100%) !important;
+        color: #ffffff !important;
+        border: none;
+        border-radius: 6px;
+        padding: 0.6rem 1.5rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+        transition: all 0.3s ease;
+    }
+
+        .btn-descargar:hover {
+            background: linear-gradient(135deg, #2d7a4f 0%, #1b5e3a 100%) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.4);
+        }
+
+    .btn-cancelar {
+        background: linear-gradient(135deg, #e53935 0%, #c62828 100%) !important;
+        color: #ffffff !important;
+        border: none;
+        border-radius: 6px;
+        padding: 0.6rem 1.5rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(229, 57, 53, 0.3);
+        transition: all 0.3s ease;
+    }
+
+        .btn-cancelar:hover {
+            background: linear-gradient(135deg, #c62828 0%, #b71c1c 100%) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(229, 57, 53, 0.4);
+        }
+
+    .modal-header {
+        background: linear-gradient(135deg, #2d7a4f 0%, #1b5e3a 100%) !important;
+        border-bottom: 3px solid #4caf50;
+    }
+
+        .modal-header .modal-title {
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 1.3rem;
+        }
+
+    
+</style>
