@@ -7,6 +7,9 @@ using ElOlivo.Servicios;
 using static ElOlivo.Servicios.AutenticationAttribute;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Text.RegularExpressions;
+using QuestPDF.Helpers;
+using QuestPDF.Fluent;
+using QuestPDF.Infrastructure;
 
 
 
@@ -1230,5 +1233,535 @@ namespace ElOlivo.Controllers
 
             return View();
         }
+
+        //Comprobantes y certificados
+
+        //Todo para comprobantes
+
+        [HttpGet]
+        public async Task<IActionResult> Comprobante(int id)
+        {
+            try
+            {
+                int? usuarioId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioId == null)
+                    return RedirectToAction("Login", "Account");
+
+                // Obtener la inscripción para validar estado
+                var inscripcion = await _elOlivoDbContext.inscripcion
+                    .FirstOrDefaultAsync(i => i.inscripcionid == id && i.usuarioid == usuarioId);
+
+                if (inscripcion == null)
+                {
+                    return Json(new { success = false, message = "Comprobante no encontrado" });
+                }
+
+                // Validar que el estado sea "Confirmada" (estadoid = 2)
+                if (inscripcion.estadoid != 2)
+                {
+                    return Json(new { success = false, message = "Solo se pueden ver comprobantes de inscripciones confirmadas" });
+                }
+
+                // Obtener datos de las tablas existentes
+                var comprobanteData = await (from i in _elOlivoDbContext.inscripcion
+                                             join e in _elOlivoDbContext.evento on i.eventoid equals e.eventoid
+                                             join u in _elOlivoDbContext.usuario on i.usuarioid equals u.usuarioid
+                                             join es in _elOlivoDbContext.estado on i.estadoid equals es.estadoid
+                                             where i.inscripcionid == id && i.usuarioid == usuarioId
+                                             select new comprobante
+                                             {
+                                                 InscripcionId = i.inscripcionid,
+                                                 NombreEvento = e.nombre,
+                                                 DescripcionEvento = e.descripcion,
+                                                 FechaInicio = e.fecha_inicio,
+                                                 FechaFin = e.fecha_fin,
+                                                 FechaInscripcion = i.fecha_inscripcion,
+                                                 NombreUsuario = u.nombre + " " + u.apellido,
+                                                 EmailUsuario = u.email,
+                                                 Institucion = u.institucion,
+                                                 Estado = es.nombre,
+                                                 CodigoComprobante = $"ELOLIVO-{i.inscripcionid:D6}"
+                                             }).FirstOrDefaultAsync();
+
+                if (comprobanteData == null)
+                {
+                    return Json(new { success = false, message = "Comprobante no encontrado" });
+                }
+
+                return PartialView("Comprobante", comprobanteData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al generar comprobante para inscripción {Id}", id);
+                return Json(new { success = false, message = "Error al generar el comprobante" });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DescargarComprobante(int id)
+        {
+            try
+            {
+                int? usuarioId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioId == null)
+                    return RedirectToAction("Login", "Account");
+
+                // Obtener la inscripción primero para validar el estado
+                var inscripcion = await _elOlivoDbContext.inscripcion
+                    .FirstOrDefaultAsync(i => i.inscripcionid == id && i.usuarioid == usuarioId);
+
+                if (inscripcion == null)
+                {
+                    return NotFound();
+                }
+
+                // Obtener el nombre del estado desde la base de datos
+                var estado = await _elOlivoDbContext.estado
+                    .Where(e => e.estadoid == inscripcion.estadoid)
+                    .Select(e => e.nombre)
+                    .FirstOrDefaultAsync();
+
+                // Validar que el estado sea "Confirmada" (estadoid = 2)
+                if (inscripcion.estadoid != 2) // 2 = Confirmada
+                {
+                    TempData["ErrorMessage"] = "Solo se pueden descargar comprobantes de inscripciones confirmadas";
+                    return RedirectToAction("Inscripciones");
+                }
+
+                var comprobanteData = await (from i in _elOlivoDbContext.inscripcion
+                                             join e in _elOlivoDbContext.evento on i.eventoid equals e.eventoid
+                                             join u in _elOlivoDbContext.usuario on i.usuarioid equals u.usuarioid
+                                             join es in _elOlivoDbContext.estado on i.estadoid equals es.estadoid
+                                             where i.inscripcionid == id && i.usuarioid == usuarioId
+                                             select new comprobante
+                                             {
+                                                 InscripcionId = i.inscripcionid,
+                                                 NombreEvento = e.nombre,
+                                                 DescripcionEvento = e.descripcion,
+                                                 FechaInicio = e.fecha_inicio,
+                                                 FechaFin = e.fecha_fin,
+                                                 FechaInscripcion = i.fecha_inscripcion,
+                                                 NombreUsuario = u.nombre + " " + u.apellido,
+                                                 EmailUsuario = u.email,
+                                                 Institucion = u.institucion,
+                                                 Estado = es.nombre,
+                                                 CodigoComprobante = $"ELOLIVO-{i.inscripcionid:D6}"
+                                             }).FirstOrDefaultAsync();
+
+                if (comprobanteData == null)
+                {
+                    return NotFound();
+                }
+
+                // Generar PDF
+                var pdfBytes = await GenerarPdfComprobante(comprobanteData);
+
+                var fileName = $"Comprobante_{comprobanteData.NombreEvento?.Replace(" ", "_") ?? "Evento"}_{DateTime.Now:yyyyMMdd}.pdf";
+
+                // Actualizar URL si es necesario
+                // inscripcion.comprobante_url = $"/comprobantes/{fileName}";
+                // await _elOlivoDbContext.SaveChangesAsync();
+
+                return File(pdfBytes, "application/pdf", fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al descargar comprobante para inscripción {Id}", id);
+                return StatusCode(500, "Error al generar el PDF");
+            }
+        }
+
+        private async Task<byte[]> GenerarPdfComprobante(comprobante comprobanteData)
+        {
+            QuestPDF.Settings.License = LicenseType.Community;
+
+            var document = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(2, Unit.Centimetre);
+                    page.PageColor(Colors.White);
+
+                    // Header institucional
+                    page.Header()
+                        .Height(4, Unit.Centimetre)
+                        .Column(column =>
+                        {
+                            // Línea superior institucional
+                            column.Item().Background(Colors.Green.Darken4).Padding(10).AlignCenter().Text("EL OLIVO - SISTEMA DE EVENTOS").FontColor(Colors.White).Bold().FontSize(12);
+
+                            // Título principal
+                            column.Item().PaddingVertical(5).AlignCenter().Text("COMPROBANTE DE INSCRIPCIÓN").Bold().FontSize(16).FontColor(Colors.Green.Darken4);
+
+                            // Línea informativa
+                            column.Item().Background(Colors.Green.Lighten5).Padding(5).Row(row =>
+                            {
+                                row.RelativeItem().AlignLeft().Text(text =>
+                                {
+                                    text.Span("Código: ").FontSize(9);
+                                    text.Span(comprobanteData.CodigoComprobante).Bold().FontSize(9);
+                                });
+                                row.RelativeItem().AlignCenter().Text(text =>
+                                {
+                                    text.Span("Fecha emisión: ").FontSize(9);
+                                    text.Span(DateTime.Now.ToString("dd/MM/yyyy")).Bold().FontSize(9);
+                                });
+                                row.RelativeItem().AlignRight().Text(text =>
+                                {
+                                    text.Span("Estado: ").FontSize(9);
+                                    text.Span(comprobanteData.Estado?.ToUpper() ?? "PENDIENTE").Bold().FontSize(9);
+                                });
+                            });
+                        });
+
+                    // Contenido principal - Diseño tipo formulario
+                    page.Content()
+                        .PaddingVertical(1, Unit.Centimetre)
+                        .Column(column =>
+                        {
+                            column.Spacing(15);
+
+                            // Sección 1: Datos del Participante
+                            column.Item().Column(participanteSection =>
+                            {
+                                participanteSection.Item().PaddingBottom(5).Text("INFORMACIÓN DEL PARTICIPANTE").Bold().FontSize(12).FontColor(Colors.Green.Darken4);
+                                participanteSection.Item().Table(table =>
+                                {
+                                    table.ColumnsDefinition(columns =>
+                                    {
+                                        columns.ConstantColumn(3, Unit.Centimetre);
+                                        columns.RelativeColumn();
+                                        columns.ConstantColumn(3, Unit.Centimetre);
+                                        columns.RelativeColumn();
+                                    });
+
+                                    table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(3).Text("Nombre:").Bold().FontSize(9);
+                                    table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(3).Text(comprobanteData.NombreUsuario ?? "N/A").FontSize(9);
+                                    table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(3).Text("Institución:").Bold().FontSize(9);
+                                    table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(3).Text(comprobanteData.Institucion ?? "N/A").FontSize(9);
+
+                                    table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(3).Text("Email:").Bold().FontSize(9);
+                                    table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(3).Text(comprobanteData.EmailUsuario ?? "N/A").FontSize(9);
+                                    table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(3).Text("Teléfono:").Bold().FontSize(9);
+                                    table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(3).Text("Registrado").FontSize(9);
+                                });
+                            });
+
+                            // Línea separadora
+                            column.Item().LineHorizontal(1).LineColor(Colors.Green.Lighten1);
+
+                            // Sección 2: Detalles del Evento
+                            column.Item().Column(eventoSection =>
+                            {
+                                eventoSection.Item().PaddingBottom(5).Text("DETALLES DEL EVENTO").Bold().FontSize(12).FontColor(Colors.Green.Darken4);
+
+                                eventoSection.Item().Background(Colors.Green.Lighten5).Padding(10).Column(eventoDetails =>
+                                {
+                                    eventoDetails.Item().Text(text =>
+                                    {
+                                        text.Span("Evento: ").Bold().FontSize(10);
+                                        text.Span(comprobanteData.NombreEvento ?? "N/A").FontSize(10);
+                                    });
+                                    eventoDetails.Item().PaddingTop(3).Text(text =>
+                                    {
+                                        text.Span("Descripción: ").Bold().FontSize(10);
+                                        text.Span(comprobanteData.DescripcionEvento ?? "N/A").FontSize(10);
+                                    });
+                                    eventoDetails.Item().PaddingTop(3).Row(row =>
+                                    {
+                                        row.RelativeItem().Text(text =>
+                                        {
+                                            text.Span("Fecha inicio: ").Bold().FontSize(10);
+                                            text.Span(comprobanteData.FechaInicio?.ToString("dd/MM/yyyy") ?? "N/A").FontSize(10);
+                                        });
+                                        row.RelativeItem().AlignRight().Text(text =>
+                                        {
+                                            text.Span("Fecha fin: ").Bold().FontSize(10);
+                                            text.Span(comprobanteData.FechaFin?.ToString("dd/MM/yyyy") ?? "N/A").FontSize(10);
+                                        });
+                                    });
+                                });
+                            });
+
+                            // Línea separadora
+                            column.Item().LineHorizontal(1).LineColor(Colors.Green.Lighten1);
+
+                            // Sección 3: Información de la Inscripción
+                            column.Item().Column(inscripcionSection =>
+                            {
+                                inscripcionSection.Item().PaddingBottom(5).Text("INFORMACIÓN DE LA INSCRIPCIÓN").Bold().FontSize(12).FontColor(Colors.Green.Darken4);
+                                inscripcionSection.Item().Table(table =>
+                                {
+                                    table.ColumnsDefinition(columns =>
+                                    {
+                                        columns.RelativeColumn();
+                                        columns.RelativeColumn();
+                                    });
+
+                                    table.Cell().Border(1).BorderColor(Colors.Grey.Lighten1).Background(Colors.Green.Lighten5).Padding(5).AlignCenter().Text("Fecha de Inscripción").Bold().FontSize(9);
+                                    table.Cell().Border(1).BorderColor(Colors.Grey.Lighten1).Background(Colors.Green.Lighten5).Padding(5).AlignCenter().Text("Estado Actual").Bold().FontSize(9);
+
+                                    table.Cell().Border(1).BorderColor(Colors.Grey.Lighten1).Padding(5).AlignCenter().Text(comprobanteData.FechaInscripcion?.ToString("dd/MM/yyyy") ?? "N/A").FontSize(9);
+                                    table.Cell().Border(1).BorderColor(Colors.Grey.Lighten1).Padding(5).AlignCenter().Text(comprobanteData.Estado ?? "N/A").FontSize(9);
+                                    
+                                });
+                            });
+
+                            // Sección 4: Notas importantes
+                            column.Item().Background(Colors.Grey.Lighten4).Border(1).BorderColor(Colors.Grey.Lighten2).Padding(8).Column(notesSection =>
+                            {
+                                notesSection.Item().Text("NOTAS IMPORTANTES").Bold().FontSize(10).FontColor(Colors.Green.Darken4);
+                                notesSection.Item().PaddingTop(3).Text("• Este comprobante confirma su registro oficial en el sistema.").FontSize(8);
+                                notesSection.Item().Text("• Presente este documento en caso de requerir verificación.").FontSize(8);
+                                notesSection.Item().Text("• Para consultas o modificaciones, utilice el código proporcionado.").FontSize(8);
+                            });
+                        });
+
+                    // Footer institucional
+                    page.Footer()
+                        .Height(1.5f, Unit.Centimetre)
+                        .BorderTop(1)
+                        .BorderColor(Colors.Green.Darken3)
+                        .PaddingTop(5)
+                        .AlignCenter()
+                        .Text(text =>
+                        {
+                            text.Span("El Olivo Sistema Académico • ").FontSize(8).FontColor(Colors.Green.Darken4);
+                            text.Span("Documento generado automáticamente • ").FontSize(8).FontColor(Colors.Grey.Medium);
+                            text.Span("Válido para fines de verificación").FontSize(8).FontColor(Colors.Grey.Medium);
+                        });
+                });
+            });
+
+            return document.GeneratePdf();
+        }
+
+
+        //Todo para certificados
+
+        // En UsuarioController.cs - Agregar estos métodos
+
+        [HttpGet]
+        public async Task<IActionResult> Certificado(int id)
+        {
+            try
+            {
+                int? usuarioId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioId == null)
+                    return RedirectToAction("Login", "Account");
+
+                // Obtener datos del certificado
+                var certificadoData = await (from c in _elOlivoDbContext.certificado
+                                             join s in _elOlivoDbContext.sesion on c.sesionid equals s.sesionid
+                                             join e in _elOlivoDbContext.evento on s.eventoid equals e.eventoid
+                                             join u in _elOlivoDbContext.usuario on c.usuarioid equals u.usuarioid
+                                             join es in _elOlivoDbContext.estado on c.estadoid equals es.estadoid
+                                             where c.certificadoid == id && c.usuarioid == usuarioId
+                                             select new certificadoComp
+                                             {
+                                                 CertificadoId = c.certificadoid,
+                                                 CodigoUnico = c.codigo_unico,
+                                                 FechaEmision = c.fecha_emision,
+                                                 Estado = es.nombre,
+                                                 NombreUsuario = u.nombre + " " + u.apellido,
+                                                 EmailUsuario = u.email,
+                                                 Institucion = u.institucion,
+                                                 EventoNombre = e.nombre,
+                                                 SesionTitulo = s.titulo,
+                                                 SesionDescripcion = s.descripcion,
+                                                 FechaInicioSesion = s.fecha_inicio,
+                                                 FechaFinSesion = s.fecha_fin
+                                             }).FirstOrDefaultAsync();
+
+                if (certificadoData == null)
+                {
+                    return Json(new { success = false, message = "Certificado no encontrado" });
+                }
+
+                // Verificar que el certificado esté emitido
+                if (certificadoData.Estado != "Emitido")
+                {
+                    return Json(new { success = false, message = "El certificado no está disponible para descarga" });
+                }
+
+                return PartialView("CertificadoComp", certificadoData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al generar certificado {Id}", id);
+                return Json(new { success = false, message = "Error al generar el certificado" });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DescargarCertificado(int id)
+        {
+            try
+            {
+                int? usuarioId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioId == null)
+                    return RedirectToAction("Login", "Account");
+
+                // Obtener el certificado de la base de datos
+                var certificado = await _elOlivoDbContext.certificado
+                    .FirstOrDefaultAsync(c => c.certificadoid == id && c.usuarioid == usuarioId);
+
+                if (certificado == null)
+                {
+                    return NotFound();
+                }
+
+                // Verificar que el certificado esté emitido (estadoid = 8)
+                if (certificado.estadoid != 8)
+                {
+                    TempData["ErrorMessage"] = "El certificado no está disponible para descarga";
+                    return RedirectToAction("Certificados");
+                }
+
+                var certificadoData = await (from c in _elOlivoDbContext.certificado
+                                             join s in _elOlivoDbContext.sesion on c.sesionid equals s.sesionid
+                                             join e in _elOlivoDbContext.evento on s.eventoid equals e.eventoid
+                                             join u in _elOlivoDbContext.usuario on c.usuarioid equals u.usuarioid
+                                             join es in _elOlivoDbContext.estado on c.estadoid equals es.estadoid
+                                             where c.certificadoid == id && c.usuarioid == usuarioId
+                                             select new certificadoComp
+                                             {
+                                                 CertificadoId = c.certificadoid,
+                                                 CodigoUnico = c.codigo_unico,
+                                                 FechaEmision = c.fecha_emision,
+                                                 Estado = es.nombre,
+                                                 NombreUsuario = u.nombre + " " + u.apellido,
+                                                 EmailUsuario = u.email,
+                                                 Institucion = u.institucion,
+                                                 EventoNombre = e.nombre,
+                                                 SesionTitulo = s.titulo,
+                                                 SesionDescripcion = s.descripcion,
+                                                 FechaInicioSesion = s.fecha_inicio,
+                                                 FechaFinSesion = s.fecha_fin
+                                             }).FirstOrDefaultAsync();
+
+                if (certificadoData == null)
+                {
+                    return NotFound();
+                }
+
+                // Generar PDF del certificado
+                var pdfBytes = await GenerarPdfCertificado(certificadoData);
+
+                var fileName = $"Certificado_{certificadoData.EventoNombre?.Replace(" ", "_") ?? "Evento"}_{DateTime.Now:yyyyMMdd}.pdf";
+
+                // Actualizar URL si es necesario (similar a comprobantes)
+                // certificado.certificado_url = $"/certificados/{fileName}";
+                // await _elOlivoDbContext.SaveChangesAsync();
+
+                return File(pdfBytes, "application/pdf", fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al descargar certificado {Id}", id);
+                return StatusCode(500, "Error al generar el certificado");
+            }
+        }
+
+        private async Task<byte[]> GenerarPdfCertificado(certificadoComp certificadoData)
+        {
+            QuestPDF.Settings.License = LicenseType.Community;
+
+            var document = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(1.5f, Unit.Centimetre);
+                    page.PageColor(Colors.White);
+
+                    // Marco simple
+                    page.Background()
+                        .Border(2)
+                        .BorderColor(Colors.Green.Darken3);
+
+                    // Header compacto
+                    page.Header()
+                        .Height(2.5f, Unit.Centimetre)
+                        .Column(column =>
+                        {
+                            column.Item().AlignCenter().Text("CERTIFICADO DE EXCELENCIA").Bold().FontSize(20).FontColor(Colors.Green.Darken4);
+                            column.Item().AlignCenter().Text("Reconocimiento Académico").FontSize(10).FontColor(Colors.Green.Darken2);
+                        });
+
+                    // Contenido ultra compacto
+                    page.Content()
+                        .PaddingVertical(0.5f, Unit.Centimetre)
+                        .Column(column =>
+                        {
+                            column.Spacing(0.6f, Unit.Centimetre);
+
+                            // Mensaje
+                            column.Item().AlignCenter().Text("Se otorga este reconocimiento a:").FontSize(12);
+
+                            // Nombre
+                            column.Item().AlignCenter()
+                                .Text(certificadoData.NombreUsuario.ToUpper())
+                                .Bold().FontSize(18).FontColor(Colors.Green.Darken4);
+
+                            // Programa
+                            column.Item().AlignCenter().Text("Por completar exitosamente:").FontSize(11);
+                            column.Item().AlignCenter()
+                                .Text(certificadoData.EventoNombre)
+                                .SemiBold().FontSize(14).FontColor(Colors.Green.Darken3);
+
+                            // Sesión
+                            column.Item().AlignCenter().Text(text =>
+                            {
+                                text.Span("Sesión: ").FontSize(10);
+                                text.Span(certificadoData.SesionTitulo).SemiBold().FontSize(10);
+                            });
+
+                            // Línea
+                            column.Item().PaddingVertical(0.3f, Unit.Centimetre)
+                                .LineHorizontal(1)
+                                .LineColor(Colors.Green.Lighten1);
+
+                            // Mensaje corto
+                            column.Item().AlignCenter().Text("En reconocimiento a su dedicación y excelencia académica").FontSize(10).Italic();
+
+                            // Fecha
+                            column.Item().AlignCenter().Text(text =>
+                            {
+                                text.Span("Completado: ").FontSize(9);
+                                text.Span(certificadoData.FechaInicioSesion?.ToString("dd/MM/yyyy") ?? "N/A").SemiBold().FontSize(9);
+                            });
+
+                            // Código
+                            column.Item().AlignCenter().PaddingTop(0.3f, Unit.Centimetre).Text(text =>
+                            {
+                                text.Span("Código: ").FontSize(8);
+                                text.Span(certificadoData.CodigoUnico).Bold().FontSize(8).FontColor(Colors.Green.Darken3);
+                            });
+                        });
+
+                    // Footer compacto
+                    page.Footer()
+                        .Height(2f, Unit.Centimetre)
+                        .Column(column =>
+                        {
+                            
+
+                            // Info
+                            column.Item().AlignCenter().Text(text =>
+                            {
+                                text.Span("Emitido: ").FontSize(7);
+                                text.Span(DateTime.Now.ToString("dd/MM/yyyy")).SemiBold().FontSize(7);
+                            });
+                        });
+                });
+            });
+
+            return document.GeneratePdf();
+        }
+
+
     }
+
 }
