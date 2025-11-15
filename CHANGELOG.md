@@ -65,3 +65,54 @@ Descripción: Desarrollo de las vistas iniciales del sistema tanto del menú de 
 
 Impacto: Ahora el usuario puede acceder a la primera vista de cada menú, permitiendo así, que pueda ver la información inicial como sus sesiones, eventos, inscripciones, certificados y su información personal. Del lado del administrador de eventos ya se han dejado las vistas para proximamente gestionar los eventos que haya creado.
 
+[0.2.0] – 25/10/2025
+
+Versión: 0.2.0
+
+Fecha: 25/10/2025
+
+Descripción: Implementación del flujo necesario para que el usuario pueda inscribirse a un Evento con la ayuda de un buscador para encontrar el evento deseado.
+
+Impacto: Ahora el usuario puede buscar ver la información e inscribirse a los eventos.
+
+
+[0.5.0] – 03/11/2025
+
+Versión: 0.5.0
+
+Fecha: 03/11/2025
+
+Descripción: Función para Gestionar Usuarios en Inscripciones y Asistencias, junto con sus vistas, opciones y filtros. Además de vistas personalizadas de administrador y función de generar reportes en Excel y PDF por Inscripción y Asistencias
+
+Impacto: Ahora los administradores de eventos pueden gestionar las Inscripciones y Asistencias para aumentar las funcionalidades y facilidades para guardar la información de los usuarios.
+
+[0.7.0] – 06/11/2025
+
+Versión: 0.7.0
+
+Fecha: 06/11/2025
+
+Descripción: Se implementó el funcionamiento de vistas y modales, para la creación de evento, sesiones, agendas y tipos de actividad, partiendo de la vista preexistente GestionEventos, rol Administrador.
+
+Impacto: Ahora los administradores de eventos crear eventos desde una agenda interactiva que ofrece facilidades, además de la implementación de un formulario por pasos para agregar sesiones y actividades.
+
+[0.9.0] – 09/11/2025
+
+Versión: 0.9.0
+
+Fecha: 09/11/2025
+
+Descripción: Cambios de paleta de colores del calendario de ver sesiones y se añadió una nueva vista complementaria del flujo de ver sesiones, además  se reparó un bug al momento de ver inscripciones e implementación de sistema de comprobantes y certificados PDF.
+
+Impacto: Ahora los usuarios tendrán una mejor experiencia al utilizar el sistema, además, los administradores de eventos podrán emitir los comprobantes y certificados de los eventos para que los usuarios los puedan descargar o guardar.
+
+[1.0.0] – 18/11/2025
+
+Versión: 1.0.0
+
+Fecha: 18/11/2025
+
+Descripción: Validaciones en la creación de eventos para no crear eventos para fechas pasadas, funcionalidad para editar los estados de eventos y correcciones de botones en GestionActividad para poder cancelar los modales de link y archivos. 
+
+Impacto: Ahora los administradores de eventos no tendrán errores visuales ni de funcionalidad en los modales, además, se evitará que los usuarios puedan comenter errores de lógica.
+
