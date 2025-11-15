@@ -158,23 +158,76 @@
         text-align: center;
     }
 
+    /* ESTILOS CORREGIDOS PARA LOS BOTONES */
     .boton-comprobante {
-        display: inline-block;
-        padding: 8px 16px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
         border-radius: 6px;
         border: none;
-        background-color: #f97316;
+        background-color: #6366f1;
         color: white;
         font-weight: 600;
-        margin-top: 10px;
-        cursor: not-allowed;
-        opacity: 0.6;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 14px;
     }
+
+        .boton-comprobante:hover {
+            background-color: #4f46e5;
+            color: white;
+            text-decoration: none;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+    .btn-gestionar {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 6px;
+        background-color: #6c75fb;
+        color: white;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+        .btn-gestionar:hover {
+            background-color: #5560e9;
+            color: white;
+            text-decoration: none;
+            transform: translateY(-1px);
+        }
 
     .boton-container {
         display: flex;
         justify-content: flex-end;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .actividad-acciones {
+        display: flex;
+        gap: 10px;
         margin-top: 15px;
+        flex-wrap: wrap;
+    }
+
+    /* Asegurar que los enlaces tengan cursor pointer */
+    a {
+        cursor: pointer;
+    }
+
+    .btn {
+        cursor: pointer;
     }
 </style>
 
@@ -183,18 +236,10 @@
     {
         foreach (var sesion in sesiones)
         {
-
-
             DateTime? fechaInicio = sesion.fecha_inicio as DateTime?;
             <div class="sesion-card">
                 <div class="sesion-header">
-                    @{
-                        var estadoInscripcion = ViewBag.InscripcionEstado as string;
-                        var claseEstado = estadoInscripcion == "Confirmada" ? "badge-confirmada"
-                        : estadoInscripcion == "En proceso" ? "badge-proceso"
-                        : "badge-no-disponible";
-                    }
-                    <div class="badge-estado @claseEstado">@estadoInscripcion</div>
+                    <div></div>
                     @if (fechaInicio != null)
                     {
                         <div class="fecha-hora">
@@ -229,6 +274,12 @@
                                     </svg>
                                     <span>Ponente: @actividad.ponenteNombre</span>
                                 </div>
+                                <div class="actividad-acciones">
+                                    <a asp-controller="Admin" asp-action="GestionActividad"
+                                       asp-route-id="@actividad.agendaid" class="btn-gestionar">
+                                        <i class="fas fa-edit"></i> Gestionar Actividad
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     }
@@ -239,13 +290,22 @@
                            asp-route-eventoId="@evento.eventoid"
                            asp-route-sesionId="@sesion.sesionid"
                            class="boton-comprobante">
-                            Gestionar Asistencia
+                            <i class="fas fa-clipboard-check"></i> Gestionar Asistencia
                         </a>
                     </div>
                 }
                 else
                 {
                     <div class="no-actividades">No hay actividades programadas para esta sesión</div>
+                    <div class="boton-container">
+                        <a asp-action="GestionAsistencias"
+                           asp-controller="Admin"
+                           asp-route-eventoId="@evento.eventoid"
+                           asp-route-sesionId="@sesion.sesionid"
+                           class="boton-comprobante">
+                            <i class="fas fa-clipboard-check"></i> Gestionar Asistencia
+                        </a>
+                    </div>
                 }
             </div>
         }
@@ -265,4 +325,3 @@
         chevron.style.transform = detalle.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
     }
 </script>
-

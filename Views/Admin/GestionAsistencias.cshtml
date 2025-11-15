@@ -3,8 +3,8 @@
     Layout = "_Layout_Admin";
     var sesion = ViewBag.Sesion;
     var eventoId = ViewBag.EventoId;
-    // Se asume que el objeto Evento se pasó al ViewBag en el controlador
     var nombreEvento = ViewBag.Evento?.nombre ?? "Evento Desconocido";
+    var eventoFinalizado = ViewBag.EventoFinalizado ?? false;
     ViewData["Title"] = $"Asistencia: {sesion.titulo}";
 }
 
@@ -12,6 +12,14 @@
 <h3>Evento: @nombreEvento</h3>
 <p>Sesión: @sesion.titulo</p>
 <p>Fecha: @(sesion.fecha_inicio?.ToString("dd/MM/yyyy HH:mm") ?? "-")</p>
+
+@if (eventoFinalizado)
+{
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <strong><i class="fas fa-lock"></i> Evento Finalizado:</strong> La asistencia no se puede modificar porque este evento ha sido marcado como finalizado.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
 
 @if (TempData["MensajeExito"] != null)
 {
@@ -28,28 +36,75 @@ else if (Model != null && Model.Any())
     <div class="export-options" style="margin-bottom: 15px;">
         <div class="dropdown">
             <button class="btn btn-primary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                Exportar Reporte
+                <i class="fas fa-download"></i> Exportar Reporte
             </button>
             <ul class="dropdown-menu" aria-labelledby="exportDropdown">
                 <li>
-                    <a class="dropdown-item"
-                       href="@Url.Action("ExportarExcelAsistencias", "Admin", new { eventoId = eventoId, sesionId = sesion.sesionid })">
-                        Exportar en Excel
+                    <a class="dropdown-item" href="@Url.Action("ExportarExcelAsistencias", "Admin", new { eventoId = eventoId, sesionId = sesion.sesionid })">
+                        <i class="fas fa-file-excel"></i> Exportar en Excel
                     </a>
                 </li>
-
                 <li>
-                    <a class="dropdown-item"
-                       href="@Url.Action("ExportarPDFAsistencias", "Admin", new { eventoId = eventoId, sesionId = sesion.sesionid })">
-                        Exportar en PDF
+                    <a class="dropdown-item" href="@Url.Action("ExportarPDFAsistencias", "Admin", new { eventoId = eventoId, sesionId = sesion.sesionid })">
+                        <i class="fas fa-file-pdf"></i> Exportar en PDF
                     </a>
                 </li>
             </ul>
         </div>
     </div>
-    <form asp-action="GuardarAsistencias" asp-controller="Admin" method="post">
-        <input type="hidden" name="sesionId" value="@sesion.sesionid" />
-        <input type="hidden" name="eventoId" value="@eventoId" />
+
+    @if (!eventoFinalizado)
+    {
+        <form asp-action="GuardarAsistencias" asp-controller="Admin" method="post">
+            <input type="hidden" name="sesionId" value="@sesion.sesionid" />
+            <input type="hidden" name="eventoId" value="@eventoId" />
+
+            <table class="table table-striped" style="margin-top: 20px;">
+                <thead>
+                    <tr>
+                        <th>Nombre del Usuario</th>
+                        <th>Email</th>
+                        <th>Asistió</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var usuario in Model)
+                    {
+                        <tr>
+                            <td>@usuario.NombreCompleto</td>
+                            <td>@usuario.email</td>
+                            <td>
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="asistieron"
+                                           value="@usuario.usuarioid"
+                                           id="chk-@usuario.usuarioid"
+                                    @(usuario.Asistio ? "checked" : "")>
+                                    <label class="form-check-label" for="chk-@usuario.usuarioid">
+                                        Presente
+                                    </label>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <button type="submit" class="btn btn-success" style="margin-top: 15px;">
+                <i class="fas fa-save"></i> Guardar Asistencia
+            </button>
+            <a asp-action="VerSesiones" asp-controller="Admin" asp-route-id="@eventoId" class="btn btn-secondary" style="margin-top: 15px;">
+                <i class="fas fa-arrow-left"></i> Volver a Sesiones
+            </a>
+        </form>
+    }
+    else
+    {
+        <!-- Vista de solo lectura cuando el evento está finalizado -->
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> La asistencia es de solo lectura porque el evento está finalizado.
+        </div>
 
         <table class="table table-striped" style="margin-top: 20px;">
             <thead>
@@ -69,12 +124,10 @@ else if (Model != null && Model.Any())
                             <div class="form-check">
                                 <input class="form-check-input"
                                        type="checkbox"
-                                       name="asistieron"
-                                       value="@usuario.usuarioid"
-                                       id="chk-@usuario.usuarioid"
-                                       @(usuario.Asistio ? "checked" : "")>
-                                <label class="form-check-label" for="chk-@usuario.usuarioid">
-                                    Presente
+                                       disabled
+                                @(usuario.Asistio ? "checked" : "")>
+                                <label class="form-check-label">
+                                    @(usuario.Asistio ? "✅ Presente" : "❌ Ausente")
                                 </label>
                             </div>
                         </td>
@@ -83,12 +136,35 @@ else if (Model != null && Model.Any())
             </tbody>
         </table>
 
-        <button type="submit" class="btn btn-success" style="margin-top: 15px;">Guardar Asistencia</button>
-        <a asp-action="VerSesiones" asp-controller="Admin" asp-route-id="@eventoId" class="btn btn-secondary" style="margin-top: 15px;">Volver a Sesiones</a>
-    </form>
+        <a asp-action="VerSesiones" asp-controller="Admin" asp-route-id="@eventoId" class="btn btn-secondary" style="margin-top: 15px;">
+            <i class="fas fa-arrow-left"></i> Volver a Sesiones
+        </a>
+    }
 }
 else
 {
     <div class="alert alert-info">No hay usuarios inscritos elegibles para registrar asistencia en esta sesión.</div>
-    <a asp-action="VerSesiones" asp-controller="Admin" asp-route-id="@eventoId" class="btn btn-secondary" style="margin-top: 15px;">Volver a Sesiones</a>
+    <a asp-action="VerSesiones" asp-controller="Admin" asp-route-id="@eventoId" class="btn btn-secondary" style="margin-top: 15px;">
+        <i class="fas fa-arrow-left"></i> Volver a Sesiones
+    </a>
+}
+
+@if (eventoFinalizado)
+{
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Deshabilitar todos los checkboxes de asistencia (por si acaso)
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.disabled = true;
+            });
+
+            // Deshabilitar botón de guardar si existe
+            const saveButton = document.querySelector('button[type="submit"]');
+            if (saveButton) {
+                saveButton.disabled = true;
+                saveButton.classList.add('disabled');
+            }
+        });
+    </script>
 }

@@ -6,13 +6,6 @@
 }
 <h4>Gestión de Eventos</h4>
 
-
-<!-- FullCalendar CSS -->
-
-
-
-
-
 <!-- Contenedor del calendario -->
 <div id="calendar"></div>
 
@@ -50,10 +43,28 @@
                 list: 'Lista'
             },
 
-            events: '/Admin/GetEventos',
-
+            events: '/Admin/GetEventos', // 🔹 Esta acción ahora solo devuelve sesiones activas
 
             dateClick: function (info) {
+                // Obtener fecha actual (sin horas/minutos/segundos)
+                var fechaActual = new Date();
+                fechaActual.setHours(0, 0, 0, 0);
+
+                // Obtener fecha clickeada (sin horas/minutos/segundos)
+                var fechaClickeada = new Date(info.date);
+                fechaClickeada.setHours(0, 0, 0, 0);
+
+                // Verificar si la fecha es pasada
+                if (fechaClickeada < fechaActual) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Fecha no disponible',
+                        text: 'No se pueden crear eventos en días pasados',
+                        confirmButtonText: 'Aceptar'
+                    });
+                    return;
+                }
+
                 var vistaMes = calendar.view.currentStart.getMonth();
                 var vistaAnio = calendar.view.currentStart.getFullYear();
 
@@ -61,21 +72,13 @@
                 var clickAnio = info.date.getFullYear();
 
                 if (clickMes === vistaMes && clickAnio === vistaAnio) {
-
-                    
-                    var fecha = info.dateStr.substring(0, 10); 
-
-                    
+                    var fecha = info.dateStr.substring(0, 10);
                     var hora = '';
                     if (info.dateStr.includes('T')) {
-                       
                         hora = FullCalendar.formatDate(info.date, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
                     }
-
-                  
                     window.location.href = '/Admin/CrearEvento?fecha=' + fecha + '&hora=' + hora;
                 } else {
-                    
                     Swal.fire({
                         icon: 'warning',
                         title: 'Atención',
@@ -85,14 +88,24 @@
                 }
             },
 
-
             eventClick: function (info) {
                 info.jsEvent.preventDefault();
-                alert(
-                    '📅 Evento: ' + info.event.title +
-                    '\nInicio: ' + info.event.start.toLocaleString() +
-                    '\nFin: ' + (info.event.end ? info.event.end.toLocaleString() : 'Sin fecha de fin')
-                );
+
+                // Obtener el ID del evento (sesión)
+                var sesionId = info.event.id;
+
+                // Redirigir a la acción RedirigirAVerSesiones con el ID de la sesión
+                if (sesionId) {
+                    window.location.href = '/Admin/RedirigirAVerSesiones/' + sesionId;
+                } else {
+                    console.error('La sesión no tiene ID');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudo identificar la sesión seleccionada',
+                        confirmButtonText: 'Aceptar'
+                    });
+                }
             }
         });
 
@@ -108,5 +121,11 @@
         border-radius: 12px;
         padding: 10px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Opcional: Deshabilitar visualmente los días pasados */
+    .fc-day-past {
+        background-color: #f8f9fa;
+        opacity: 0.6;
     }
 </style>

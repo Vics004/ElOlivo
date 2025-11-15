@@ -141,6 +141,7 @@ namespace ElOlivo.Controllers
 
                 var query = from e in _elOlivoDbContext.evento
                             join es in _elOlivoDbContext.estado on e.estadoid equals es.estadoid
+                            where e.estadoid == 3 // SOLO EVENTOS ABIERTOS (estadoid = 3)
                             select new
                             {
                                 e.eventoid,
@@ -195,6 +196,32 @@ namespace ElOlivo.Controllers
                 var estado = await _elOlivoDbContext.estado
                     .FirstOrDefaultAsync(es => es.estadoid == evento.estadoid);
 
+                // Contar inscripciones confirmadas del evento
+                var totalInscritos = await _elOlivoDbContext.inscripcion
+                    .CountAsync(i => i.eventoid == id && i.estadoid == 2); // 2 = Confirmada
+
+                // Verificar si se alcanzó la capacidad máxima
+                bool capacidadAlcanzada = evento.capacidad_maxima.HasValue &&
+                                         totalInscritos >= evento.capacidad_maxima.Value;
+
+                // Si se alcanzó la capacidad, actualizar el estado del evento a 6 (Inscripción Cerrada)
+                if (capacidadAlcanzada && evento.estadoid != 6)
+                {
+                    evento.estadoid = 6; // 6 = Inscripción Cerrada
+                    await _elOlivoDbContext.SaveChangesAsync();
+
+                    // Actualizar el objeto estado para la vista
+                    estado = await _elOlivoDbContext.estado
+                        .FirstOrDefaultAsync(es => es.estadoid == 6);
+                }
+
+                // Verificar el estado de la inscripción del usuario
+                var inscripcionExistente = await _elOlivoDbContext.inscripcion
+                    .FirstOrDefaultAsync(i => i.eventoid == id && i.usuarioid == usuarioId);
+
+                bool yaInscrito = inscripcionExistente != null && inscripcionExistente.estadoid == 2; // Solo Confirmada
+                bool inscripcionCancelada = inscripcionExistente != null && inscripcionExistente.estadoid == 1; // Cancelada
+
                 // Preparar datos del evento para la vista
                 var eventoData = new
                 {
@@ -210,17 +237,18 @@ namespace ElOlivo.Controllers
                     EncargadoNombre = administrador != null ?
                         $"{administrador.nombre} {administrador.apellido}" : "No asignado",
                     EncargadoTelefono = administrador?.telefono ?? "No disponible",
-                    EstadoEvento = estado?.nombre ?? "No definido"
+                    EstadoEvento = estado?.nombre ?? "No definido",
+                    TotalInscritos = totalInscritos,
+                    CapacidadAlcanzada = capacidadAlcanzada,
+                    EstadoId = evento.estadoid
                 };
 
-                // Verificar si el usuario ya está inscrito
-                var inscripcionExistente = await _elOlivoDbContext.inscripcion
-                    .FirstOrDefaultAsync(i => i.eventoid == id && i.usuarioid == usuarioId);
-
                 ViewBag.Evento = eventoData;
-                ViewBag.YaInscrito = inscripcionExistente != null;
+                ViewBag.YaInscrito = yaInscrito;
+                ViewBag.InscripcionCancelada = inscripcionCancelada;
                 ViewBag.InscripcionId = inscripcionExistente?.inscripcionid;
                 ViewBag.EventoId = id;
+                ViewBag.CapacidadAlcanzada = capacidadAlcanzada;
 
                 return View();
             }
@@ -277,34 +305,66 @@ namespace ElOlivo.Controllers
                 if (usuarioId == null)
                     return RedirectToAction("Login", "Account");
 
-                // Verificar si ya está inscrito
+                // Obtener el evento actualizado
+                var evento = await _elOlivoDbContext.evento.FindAsync(eventoid);
+                if (evento == null)
+                {
+                    TempData["Error"] = "El evento no existe.";
+                    return RedirectToAction("Buscar_Enventos");
+                }
+
+                // Verificar si las inscripciones están cerradas
+                if (evento.estadoid == 6) // 6 = Inscripción Cerrada
+                {
+                    TempData["Error"] = "Las inscripciones para este evento están cerradas.";
+                    return RedirectToAction("DetallesEvento", new { id = eventoid });
+                }
+
+                // Verificar si ya está inscrito (estado Confirmada)
                 var inscripcionExistente = await _elOlivoDbContext.inscripcion
                     .FirstOrDefaultAsync(i => i.eventoid == eventoid && i.usuarioid == usuarioId);
 
                 if (inscripcionExistente != null)
                 {
-                    TempData["Error"] = "Ya estás inscrito en este evento.";
-                    return RedirectToAction("DetallesEvento", new { id = eventoid });
+                    if (inscripcionExistente.estadoid == 2) // Ya está confirmado
+                    {
+                        TempData["Error"] = "Ya estás inscrito en este evento.";
+                        return RedirectToAction("DetallesEvento", new { id = eventoid });
+                    }
+                    else if (inscripcionExistente.estadoid == 1) // Está cancelado, reactivar
+                    {
+                        inscripcionExistente.estadoid = 2; // Cambiar a Confirmada
+                        inscripcionExistente.fecha_inscripcion = DateTime.UtcNow; // Actualizar fecha
+
+                        await _elOlivoDbContext.SaveChangesAsync();
+
+                        TempData["Success"] = "¡Te has vuelto a inscribir exitosamente al evento!";
+                        return RedirectToAction("InscripcionExitosa", new { id = eventoid });
+                    }
                 }
+
+                // Contar inscripciones confirmadas
+                var totalInscritos = await _elOlivoDbContext.inscripcion
+                    .CountAsync(i => i.eventoid == eventoid && i.estadoid == 2);
 
                 // Verificar capacidad del evento
-                var evento = await _elOlivoDbContext.evento.FindAsync(eventoid);
-                var totalInscritos = await _elOlivoDbContext.inscripcion
-                    .CountAsync(i => i.eventoid == eventoid);
-
                 if (evento.capacidad_maxima.HasValue && totalInscritos >= evento.capacidad_maxima.Value)
                 {
-                    TempData["Error"] = "El evento ha alcanzado su capacidad máxima.";
+                    // Actualizar estado del evento a Inscripción Cerrada
+                    evento.estadoid = 6;
+                    await _elOlivoDbContext.SaveChangesAsync();
+
+                    TempData["Error"] = "El evento ha alcanzado su capacidad máxima. Las inscripciones están cerradas.";
                     return RedirectToAction("DetallesEvento", new { id = eventoid });
                 }
 
-                // Crear nueva inscripción
+                // Crear nueva inscripción (primera vez)
                 var nuevaInscripcion = new inscripcion
                 {
                     eventoid = eventoid,
                     usuarioid = usuarioId,
                     fecha_inscripcion = DateTime.UtcNow,
-                    estadoid = 2, // 2 = Confirmada (ajusta según tus estados)
+                    estadoid = 2, // 2 = Confirmada
                     comprobante_url = null
                 };
 
@@ -539,80 +599,190 @@ namespace ElOlivo.Controllers
 
         public ActionResult GetEventos()
         {
-            //Obtener los id de eventoid en los que el usuario está inscrito
-
-            var eventoid = (from i in _elOlivoDbContext.inscripcion
-                            where i.usuarioid == HttpContext.Session.GetInt32("usuarioId")
-                            select i.eventoid).ToList();
-
-            //Obtener las sesiones de los eventos en los que el usuario está inscrito
-            var sesiones = (from s in _elOlivoDbContext.sesion
-                            where eventoid.Contains(s.eventoid) && s.activo == true
-                            select s).ToList();
-            //var sesiones =(from sesion in _elOlivoDbContext.sesion
-            // where sesion.
-            // select sesion).ToList();
-
-            var data = sesiones.Select(e => new
+            try
             {
-                id = e.sesionid,
-                title = e.titulo,
-                start = e.fecha_inicio.HasValue
-                    ? e.fecha_inicio.Value.ToString("yyyy-MM-ddTHH:mm:ss")
-                    : null,
-                end = e.fecha_fin.HasValue
-                    ? e.fecha_fin.Value.ToString("yyyy-MM-ddTHH:mm:ss")
-                    : null,
-                color = "#28a745", // Verde para sesiones
-                textColor = "white",
-                allDay= false
-            });
+                int? usuarioId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioId == null)
+                {
+                    return Json(new List<object>());
+                }
 
-            return Json(data);
+                // Obtener los id de eventoid en los que el usuario está inscrito y NO cancelados
+                var eventoid = (from i in _elOlivoDbContext.inscripcion
+                                join e in _elOlivoDbContext.evento on i.eventoid equals e.eventoid
+                                where i.usuarioid == usuarioId
+                                      && i.estadoid != 1 // No cancelada
+                                      && e.estadoid != 5 // Evento no cancelado
+                                select i.eventoid).ToList();
+
+                // Obtener las sesiones de los eventos en los que el usuario está inscrito
+                var sesiones = (from s in _elOlivoDbContext.sesion
+                                where eventoid.Contains(s.eventoid)
+                                      && s.activo == true
+                                select s).ToList();
+
+                var data = sesiones.Select(e => new
+                {
+                    id = e.sesionid,
+                    title = e.titulo ?? "Sesión sin título",
+                    start = e.fecha_inicio.HasValue
+                        ? e.fecha_inicio.Value.ToString("yyyy-MM-ddTHH:mm:ss")
+                        : null,
+                    end = e.fecha_fin.HasValue
+                        ? e.fecha_fin.Value.ToString("yyyy-MM-ddTHH:mm:ss")
+                        : null,
+                    color = "#28a745", // Verde para sesiones
+                    textColor = "white",
+                    allDay = false
+                });
+
+                return Json(data);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener eventos");
+                return Json(new { error = "Error al cargar los eventos" });
+            }
         }
 
         public ActionResult GetEventosPersonal()
         {
-            var sesiones = _elOlivoDbContext.sesion.ToList();
-
-            var data = sesiones.Select(e => new
+            try
             {
-                id = e.sesionid,
-                title = e.titulo,
-                start = e.fecha_inicio.HasValue
-                    ? e.fecha_inicio.Value.ToString("yyyy-MM-ddTHH:mm:ss")
-                    : null,
-                end = e.fecha_fin.HasValue
-                    ? e.fecha_fin.Value.ToString("yyyy-MM-ddTHH:mm:ss")
-                    : null,
-                color = "#28a745", // Verde para sesiones
-                textColor = "white",
-                allDay = false
-            });
+                int? usuarioId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioId == null)
+                {
+                    return Json(new List<object>());
+                }
 
-            return Json(data);
+                // Obtener las sesiones filtrando eventos cancelados e inscripciones canceladas
+                var sesiones = (from s in _elOlivoDbContext.sesion
+                                join e in _elOlivoDbContext.evento on s.eventoid equals e.eventoid
+                                join i in _elOlivoDbContext.inscripcion on e.eventoid equals i.eventoid into inscripciones
+                                from i in inscripciones.Where(x => x.usuarioid == usuarioId).DefaultIfEmpty()
+                                where s.activo == true
+                                      && e.estadoid != 5 // Excluir eventos cancelados (estadoid = 5)
+                                      && (i == null || i.estadoid != 1) // Excluir si la inscripción está cancelada (estadoid = 1)
+                                select new
+                                {
+                                    s.sesionid,
+                                    s.titulo,
+                                    s.fecha_inicio,
+                                    s.fecha_fin,
+                                    s.descripcion,
+                                    s.ubicacion,
+                                    s.tipo_sesion,
+                                    EventoEstadoId = e.estadoid,
+                                    InscripcionEstadoId = (int?)i.estadoid
+                                }).ToList();
+
+                var data = sesiones.Select(e => new
+                {
+                    id = e.sesionid,
+                    title = e.titulo ?? "Sesión sin título",
+                    start = e.fecha_inicio.HasValue
+                        ? e.fecha_inicio.Value.ToString("yyyy-MM-ddTHH:mm:ss")
+                        : null,
+                    end = e.fecha_fin.HasValue
+                        ? e.fecha_fin.Value.ToString("yyyy-MM-ddTHH:mm:ss")
+                        : null,
+                    description = e.descripcion ?? "Sin descripción",
+                    ubicacion = e.ubicacion ?? "Ubicación no definida",
+                    tipo = e.tipo_sesion ?? "Tipo no definido",
+                    color = GetColorForEvent(e.EventoEstadoId, e.InscripcionEstadoId),
+                    textColor = "white",
+                    allDay = false
+                });
+
+                return Json(data);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener eventos personales");
+                return Json(new List<object>());
+            }
+        }
+
+        // Método auxiliar para determinar el color según el estado
+        private string GetColorForEvent(int? eventoEstadoId, int? inscripcionEstadoId)
+        {
+            // Si el evento está cancelado (no debería aparecer por el filtro, pero por seguridad)
+            if (eventoEstadoId == 5)
+                return "#6c757d"; // Gris para cancelados
+
+            // Si la inscripción está cancelada (no debería aparecer por el filtro, pero por seguridad)
+            if (inscripcionEstadoId == 1)
+                return "#6c757d"; // Gris para cancelados
+
+            // Colores según el estado del evento
+            return eventoEstadoId switch
+            {
+                3 => "#28a745", // Verde para Abierto
+                4 => "#17a2b8", // Azul para Finalizado
+                6 => "#dc3545", // Rojo para Inscripción Cerrada
+                _ => "#28a745"  // Verde por defecto
+            };
         }
 
 
-        public IActionResult InfoActividad(int id)
+        public async Task<IActionResult> InfoActividad(int id)
         {
-            var actividad = (from a in _elOlivoDbContext.actividad
-                             join u in _elOlivoDbContext.usuario on a.ponenteid equals u.usuarioid
-                             join ta in _elOlivoDbContext.tipoactividad on a.tipoactividadid equals ta.tipoactividadid
-                             where a.agendaid == id
-                             select new
-                             {
-                                 Nombre= a.nombre,
-                                 Descripcion= a.descripcion,
-                                 Inicio= a.hora_inicio.Value.ToString("h:mm tt", new System.Globalization.CultureInfo("es-ES")),
-                                 Fin= a.hora_fin,
-                                 Ponente= u.nombre + " " + u.apellido,
-                                 Actividad= ta.nombre,
-                                 Estado = a.activo
-                             }).FirstOrDefault();
-            ViewBag.Actividad = actividad;
+            try
+            {
+                _logger.LogInformation($"Cargando información de actividad {id}");
 
-            return View();
+                var actividad = await (from a in _elOlivoDbContext.actividad
+                                       join u in _elOlivoDbContext.usuario on a.ponenteid equals u.usuarioid
+                                       join ta in _elOlivoDbContext.tipoactividad on a.tipoactividadid equals ta.tipoactividadid
+                                       where a.agendaid == id
+                                       select new
+                                       {
+                                           AgendaId = a.agendaid,
+                                           Nombre = a.nombre,
+                                           Descripcion = a.descripcion,
+                                           Inicio = a.hora_inicio.HasValue ?
+                                               a.hora_inicio.Value.ToString("h:mm tt", new System.Globalization.CultureInfo("es-ES")) : "No definido",
+                                           Fin = a.hora_fin,
+                                           Ponente = u.nombre + " " + u.apellido,
+                                           Actividad = ta.nombre,
+                                           Estado = a.activo
+                                       }).FirstOrDefaultAsync();
+
+                if (actividad == null)
+                {
+                    _logger.LogWarning($"Actividad {id} no encontrada");
+                    TempData["Error"] = "Actividad no encontrada";
+                    return RedirectToAction("Dashboard");
+                }
+
+                // Obtener materiales (archivos y links) - SIN filtro por público
+                var materiales = await (from m in _elOlivoDbContext.material
+                                        join ta in _elOlivoDbContext.tipo_archivo on m.tipo_archivoid equals ta.tipo_archivoid
+                                        where m.agendaid == id
+                                        orderby m.fecha_subida descending
+                                        select new
+                                        {
+                                            m.materialid,
+                                            m.nombre,
+                                            m.url_archivo,
+                                            m.fecha_subida,
+                                            m.publico,
+                                            TipoNombre = ta.nombre,
+                                            EsLink = ta.nombre == "Link" || ta.nombre == "URL"
+                                        }).ToListAsync();
+
+
+                ViewBag.Actividad = actividad;
+                ViewBag.Materiales = materiales;
+
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar información de actividad {Id}", id);
+                TempData["Error"] = "Error al cargar la actividad";
+                return RedirectToAction("Dashboard");
+            }
         }
 
 
@@ -699,7 +869,7 @@ namespace ElOlivo.Controllers
                     return RedirectToAction("Login", "Account");
 
                 var inscripcion = await _elOlivoDbContext.inscripcion
-                                    .FirstOrDefaultAsync(i => i.inscripcionid == id && i.usuarioid == usuarioId);
+                                        .FirstOrDefaultAsync(i => i.inscripcionid == id && i.usuarioid == usuarioId);
 
                 if (inscripcion == null)
                 {
@@ -707,16 +877,59 @@ namespace ElOlivo.Controllers
                     return NotFound();
                 }
 
-                inscripcion.estadoid = 1; // Cancelada
+                // Obtener el evento relacionado
+                var evento = await _elOlivoDbContext.evento
+                                    .FirstOrDefaultAsync(e => e.eventoid == inscripcion.eventoid);
+
+                if (evento == null)
+                {
+                    _logger.LogWarning("Evento no encontrado para inscripción: {Id}", id);
+                    return NotFound();
+                }
+
+                // Contar inscripciones confirmadas actuales
+                var totalInscritosConfirmados = await _elOlivoDbContext.inscripcion
+                    .CountAsync(i => i.eventoid == evento.eventoid && i.estadoid == 2); // 2 = Confirmada
+
+                // Verificar si el evento tenía inscripciones cerradas por capacidad
+                bool estabaEnCapacidadMaxima = evento.estadoid == 6 &&
+                                              evento.capacidad_maxima.HasValue &&
+                                              totalInscritosConfirmados >= evento.capacidad_maxima.Value;
+
+                // Cancelar la inscripción
+                inscripcion.estadoid = 1; // 1 = Cancelada
+
+                // Si el evento tenía inscripciones cerradas por capacidad máxima, reabrirlas
+                // porque ahora hay un espacio disponible
+                if (estabaEnCapacidadMaxima)
+                {
+                    evento.estadoid = 3; // 3 = Abierto
+                    _logger.LogInformation("Reabriendo inscripciones para evento {EventoId} después de cancelación. Espacios disponibles: {Disponibles}",
+                                          evento.eventoid, evento.capacidad_maxima - totalInscritosConfirmados + 1);
+                }
+
                 await _elOlivoDbContext.SaveChangesAsync();
 
-                _logger.LogInformation("Inscripción {Id} cancelada correctamente", id);
+                _logger.LogInformation("Inscripción {Id} cancelada correctamente. Evento reabierto: {Reabierto}",
+                                      id, estabaEnCapacidadMaxima);
+
+                // Mensaje informativo
+                if (estabaEnCapacidadMaxima)
+                {
+                    TempData["Success"] = "Inscripción cancelada. El evento ahora tiene espacios disponibles y está abierto para nuevas inscripciones.";
+                }
+                else
+                {
+                    TempData["Success"] = "Inscripción cancelada correctamente.";
+                }
+
                 return RedirectToAction(nameof(Inscripciones));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al cancelar inscripción {Id}", id);
-                return Content(ex.ToString());
+                TempData["Error"] = "Ocurrió un error al cancelar la inscripción.";
+                return RedirectToAction(nameof(Inscripciones));
             }
         }
 
@@ -863,7 +1076,7 @@ namespace ElOlivo.Controllers
 
 
         [Autenticacion]
-        public IActionResult MiPerfil()
+        public async Task<IActionResult> MiPerfil()
         {
             var usuarioId = HttpContext.Session.GetInt32("usuarioId");
 
@@ -886,7 +1099,28 @@ namespace ElOlivo.Controllers
 
             if (usuario == null) return NotFound();
 
+            // Obtener los certificados del usuario
+            var certificados = await (from c in _elOlivoDbContext.certificado
+                                      join s in _elOlivoDbContext.sesion on c.sesionid equals s.sesionid
+                                      join e in _elOlivoDbContext.evento on s.eventoid equals e.eventoid
+                                      join es in _elOlivoDbContext.estado on c.estadoid equals es.estadoid
+                                      where c.usuarioid == usuarioId
+                                      orderby c.fecha_emision descending
+                                      select new
+                                      {
+                                          c.certificadoid,
+                                          c.codigo_unico,
+                                          c.fecha_emision,
+                                          EstadoId = c.estadoid,
+                                          EstadoNombre = es.nombre,
+                                          EventoNombre = e.nombre,
+                                          SesionTitulo = s.titulo,
+                                          FechaEmision = c.fecha_emision
+                                      }).Take(5).ToListAsync(); // Mostrar solo los últimos 5 certificados
+
             ViewBag.Usuario = usuario;
+            ViewBag.Certificados = certificados;
+
             return View();
         }
 

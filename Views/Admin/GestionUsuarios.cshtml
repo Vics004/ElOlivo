@@ -214,3 +214,61 @@ else
         }
     </div>
 }
+
+@section Scripts {
+    <script>
+        document.getElementById('btnEnviarCertificados').addEventListener('click', function () {
+            if (!confirm('¿Está seguro de enviar certificados a los usuarios APTOS (>=75% asistencia) que cumplan con los filtros actuales?')) {
+                return;
+            }
+
+            // Obtener los parámetros de filtro actuales
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('eventId') || '@currentEventId';
+            const search = urlParams.get('search') || '';
+            const estadoInscripcion = urlParams.get('estadoInscripcion') || '';
+            const asistenciaApto = urlParams.get('asistenciaApto') || '';
+            const fechaDesde = urlParams.get('fechaDesde') || '';
+            const fechaHasta = urlParams.get('fechaHasta') || '';
+
+            // Mostrar indicador de carga
+            const btn = this;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Procesando...';
+
+            // Hacer la petición AJAX
+            fetch('@Url.Action("EnviarCertificados", "Admin")?' + new URLSearchParams({
+                eventId: eventId,
+                search: search,
+                estadoInscripcion: estadoInscripcion,
+                asistenciaApto: asistenciaApto,
+                fechaDesde: fechaDesde,
+                fechaHasta: fechaHasta
+            }), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+
+                    if (data.success) {
+                        alert(data.mensaje);
+                        // Opcional: recargar la página
+                        // location.reload();
+                    } else {
+                        alert('Error: ' + data.mensaje);
+                    }
+                })
+                .catch(error => {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                    alert('Error al procesar la solicitud: ' + error);
+                });
+        });
+    </script>
+}

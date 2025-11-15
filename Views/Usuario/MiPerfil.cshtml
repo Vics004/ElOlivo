@@ -192,6 +192,108 @@
                     </div>
                 </div>
             </div>
+
+           
+        </div>
+
+        <!-- Sección de Certificados -->
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-12">
+                        <h5 class="section-title mb-4">
+                            <i class="fas fa-award me-2 text-warning"></i>
+                            Mis Certificados
+                        </h5>
+                    </div>
+                </div>
+
+                @if (ViewBag.Certificados != null && ViewBag.Certificados.Count > 0)
+                {
+                    <div class="row">
+                        @foreach (var certificado in ViewBag.Certificados)
+                        {
+                            <div class="col-md-6 mb-3">
+                                <div class="certificado-card">
+                                    <div class="certificado-header">
+                                        <div class="certificado-icon">
+                                            <i class="fas fa-certificate text-warning"></i>
+                                        </div>
+                                        <div class="certificado-info">
+                                            <h6 class="certificado-title">@certificado.SesionTitulo</h6>
+                                            <p class="certificado-event">@certificado.EventoNombre</p>
+                                        </div>
+                                        <span class="certificado-badge @(certificado.EstadoId == 8 ? "estado-emitido" : "estado-pendiente")">
+                                            @certificado.EstadoNombre
+                                        </span>
+                                    </div>
+                                    <div class="certificado-body">
+                                        <div class="certificado-details">
+                                            <div class="detail-item">
+                                                <i class="fas fa-hashtag text-muted"></i>
+                                                <span class="detail-text">@certificado.codigo_unico</span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <i class="fas fa-calendar text-muted"></i>
+                                                <span class="detail-text">@certificado.FechaEmision?.ToString("dd/MM/yyyy")</span>
+                                            </div>
+                                        </div>
+                                        <div class="certificado-actions">
+                                            @if (certificado.EstadoId == 8) // 8 = Emitido
+                                            {
+                                                <a href="@Url.Action("Certificado", new { id = certificado.certificadoid })"
+                                                   class="btn btn-outline-primary btn-sm btn-certificado"
+                                                   data-certificado-id="@certificado.certificadoid">
+                                                    <i class="fas fa-eye me-1"></i> Ver
+                                                </a>
+                                                <a href="@Url.Action("DescargarCertificado", new { id = certificado.certificadoid })"
+                                                   class="btn btn-warning btn-sm">
+                                                    <i class="fas fa-download me-1"></i> Descargar
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-outline-secondary btn-sm" disabled>
+                                                    <i class="fas fa-clock me-1"></i> Pendiente
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Enlace para ver todos los certificados -->
+                    <div class="text-center mt-3">
+                        <a href="@Url.Action("Certificados")" class="btn btn-outline-success">
+                            <i class="fas fa-list me-1"></i> Ver Todos los Certificados
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4">
+                        <div class="empty-state">
+                            <i class="fas fa-certificate fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No tienes certificados aún</h5>
+                            <p class="text-muted mb-3">Los certificados aparecerán aquí una vez que completes eventos y sesiones.</p>
+                            <a href="@Url.Action("Buscar_Enventos")" class="btn btn-primary">
+                                <i class="fas fa-calendar-plus me-1"></i> Explorar Eventos
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para certificado -->
+<div class="modal fade" id="certificadoModal" tabindex="-1" aria-labelledby="certificadoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="certificadoModalContent">
+            <!-- El contenido se cargará aquí via AJAX -->
         </div>
     </div>
 </div>
@@ -306,4 +408,198 @@
         border-radius: 6px;
         font-weight: 500;
     }
+
+    /* Estilos para certificados */
+    .certificado-card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1.25rem;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+        .certificado-card:hover {
+            border-color: #ffc107;
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.15);
+            transform: translateY(-2px);
+        }
+
+    .certificado-header {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .certificado-icon {
+        width: 40px;
+        height: 40px;
+        background: #fff9e6;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+        border: 2px solid #ffeaa7;
+    }
+
+        .certificado-icon i {
+            font-size: 1.1rem;
+            color: #ffc107;
+        }
+
+    .certificado-info {
+        flex: 1;
+    }
+
+    .certificado-title {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.25rem;
+        font-size: 0.95rem;
+        line-height: 1.3;
+    }
+
+    .certificado-event {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+
+    .certificado-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+
+    .estado-emitido {
+        background: #d1edff;
+        color: #004085;
+        border: 1px solid #b8daff;
+    }
+
+    .estado-pendiente {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+
+    .certificado-body {
+        border-top: 1px solid #e9ecef;
+        padding-top: 1rem;
+    }
+
+    .certificado-details {
+        margin-bottom: 1rem;
+    }
+
+    .detail-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+        .detail-item i {
+            width: 16px;
+            margin-right: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+    .detail-text {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+
+    .certificado-actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+
+    .empty-state {
+        padding: 2rem 1rem;
+    }
+
+        .empty-state i {
+            opacity: 0.5;
+        }
+
+    .btn-certificado {
+        border-radius: 6px;
+        font-size: 0.8rem;
+        padding: 0.375rem 0.75rem;
+    }
+
+    .btn-warning {
+        background: linear-gradient(135deg, #ffc107, #e0a800);
+        border: none;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        padding: 0.375rem 0.75rem;
+        color: #212529;
+        font-weight: 500;
+    }
+
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #e0a800, #d39e00);
+            color: #212529;
+            transform: translateY(-1px);
+        }
 </style>
+
+@section Scripts {
+    <script>
+        // Manejar clic en botones de certificado
+        $(document).on('click', '.btn-certificado', function (e) {
+            e.preventDefault();
+
+            var btn = $(this);
+            var url = btn.attr('href');
+            var certificadoId = btn.data('certificado-id');
+
+            console.log('Cargando certificado:', certificadoId);
+
+            // Mostrar loading en el modal
+            $('#certificadoModalContent').html(`
+                <div class="modal-header">
+                    <h5 class="modal-title">Cargando certificado...</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="spinner-border text-warning" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="mt-2">Cargando certificado...</p>
+                </div>
+            `);
+
+            // Mostrar el modal
+            var certificadoModal = new bootstrap.Modal(document.getElementById('certificadoModal'));
+            certificadoModal.show();
+
+            // Cargar el contenido del certificado via AJAX
+            $.get(url)
+                .done(function (data) {
+                    console.log('Certificado cargado exitosamente');
+                    $('#certificadoModalContent').html(data);
+                })
+                .fail(function (xhr, status, error) {
+                    console.error('Error al cargar certificado:', error);
+                    $('#certificadoModalContent').html(`
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title">Error</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Error al cargar el certificado. Por favor, intente nuevamente.</p>
+                            <p class="text-muted">Error: ${error}</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        </div>
+                    `);
+                });
+        });
+    </script>
+}

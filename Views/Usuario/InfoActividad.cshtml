@@ -2,48 +2,11 @@
     Layout = "_Layout_Usuario";
     ViewData["Title"] = "Detalle de Actividad";
     var actividad = ViewBag.Actividad;
-    var Estado=""; 
+    var materiales = ViewBag.Materiales;
+    var Estado = "";
     if (actividad.Estado) { Estado = "Disponible"; }
-	else { Estado = "Cancelado"; }
-
+    else { Estado = "Cancelado"; }
 }
-
-<div class="evento-container">
-
-    <!-- Información general -->
-    <div class="sesion-header">
-        <div class="evento-titulo">Actividad</div>
-        <div class="fecha-hora">
-            <span class="badge-estado badge-confirmada">@Estado</span>
-            <span class="fecha-badge">@actividad.Inicio</span>
-        </div>
-    </div>
-
-    <!-- Descripción -->
-    <div class="sesion-titulo">Demostración interactiva de IA</div>
-    <div class="sesion-descripcion">
-        @actividad.Descripcion
-    </div>
-
-    <!-- Ponente -->
-    <div class="ponente-info" style="color: #1f2937;">
-		<strong>Ponente:</strong> @actividad.Ponente
-    </div>
-
-    <!-- Links -->
-    <div style="margin-top: 20px;">
-       
-    </div>
-
-    <!-- Archivos adjuntos -->
-    <div style="margin-top: 25px;">
-        <p><strong>Archivos adjuntos:</strong></p>
-        <div style="display: flex; align-items: center; gap: 15px;">
-
-        </div>
-    </div>
-
-</div>
 
 <style>
     .evento-container {
@@ -111,6 +74,99 @@
         margin-bottom: 20px;
     }
 
+    .material-item {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .material-info {
+        flex: 1;
+    }
+
+    .material-nombre {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 5px;
+    }
+
+    .material-fecha {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .btn-descargar {
+        background-color: #17a2b8;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+        .btn-descargar:hover {
+            background-color: #138496;
+            color: white;
+            text-decoration: none;
+        }
+
+    .btn-abrir {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+        .btn-abrir:hover {
+            background-color: #218838;
+            color: white;
+            text-decoration: none;
+        }
+
+    .material-section {
+        margin-top: 25px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+    }
+
+    .material-section-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .no-materials {
+        color: #6b7280;
+        font-style: italic;
+        text-align: center;
+        padding: 30px;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        border: 1px dashed #dee2e6;
+    }
+
     a {
         color: #2563eb;
         text-decoration: none;
@@ -120,3 +176,146 @@
             text-decoration: underline;
         }
 </style>
+
+<div class="evento-container">
+    <!-- Información general -->
+    <div class="sesion-header">
+        <div class="evento-titulo">Actividad</div>
+        <div class="fecha-hora">
+            <span class="badge-estado badge-confirmada">@Estado</span>
+            <span class="fecha-badge">@actividad.Inicio</span>
+        </div>
+    </div>
+
+    <!-- Nombre de la actividad -->
+    <div class="sesion-titulo">@actividad.Nombre</div>
+
+    <!-- Descripción -->
+    <div class="sesion-descripcion">
+        @(string.IsNullOrEmpty(actividad.Descripcion) ? "No hay descripción disponible." : actividad.Descripcion)
+    </div>
+
+    <!-- Ponente -->
+    <div class="ponente-info" style="color: #1f2937; margin-bottom: 10px;">
+        <strong>Ponente:</strong> @actividad.Ponente
+    </div>
+
+    <!-- Tipo de actividad -->
+    <div class="ponente-info" style="color: #1f2937; margin-bottom: 20px;">
+        <strong>Tipo de Actividad:</strong> @actividad.Actividad
+    </div>
+
+    <!-- Links -->
+    <div class="material-section">
+        <div class="material-section-title">
+            <i class="fas fa-link"></i> Enlaces de la Actividad
+        </div>
+
+        <div id="listaLinks">
+            @if (materiales != null)
+            {
+                foreach (var material in materiales)
+                {
+                    if (material.EsLink)
+                    {
+                        <div class="material-item" data-materialid="@material.materialid">
+                            <div class="material-info">
+                                <div class="material-nombre">@material.nombre</div>
+                                <div class="material-fecha">
+                                    Agregado: @material.fecha_subida?.ToString("dd/MM/yyyy HH:mm")
+                                </div>
+                                <a href="@material.url_archivo" target="_blank" style="color: #2563eb;">@material.url_archivo</a>
+                            </div>
+                            <div>
+                                <a href="@material.url_archivo" target="_blank" class="btn-abrir">
+                                    <i class="fas fa-external-link-alt"></i> Abrir
+                                </a>
+                            </div>
+                        </div>
+                    }
+                }
+            }
+            else
+            {
+                <div class="no-materials">
+                    <i class="fas fa-link fa-2x" style="margin-bottom: 10px;"></i><br>
+                    No hay enlaces disponibles para esta actividad.
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Archivos adjuntos -->
+    <div class="material-section">
+        <div class="material-section-title">
+            <i class="fas fa-file"></i> Archivos Adjuntos
+        </div>
+
+        <div id="listaArchivos">
+            @if (materiales != null)
+            {
+                foreach (var material in materiales)
+                {
+                    if (!material.EsLink)
+                    {
+                        <div class="material-item" data-materialid="@material.materialid">
+                            <div class="material-info">
+                                <div class="material-nombre">
+                                    <i class="fas fa-file"></i> @material.nombre
+                                </div>
+                                <div class="material-fecha">
+                                    Subido: @material.fecha_subida?.ToString("dd/MM/yyyy HH:mm")
+                                </div>
+                            </div>
+                            <div>
+                                <a href="@material.url_archivo" target="_blank" class="btn-descargar" download>
+                                    <i class="fas fa-download"></i> Descargar
+                                </a>
+                            </div>
+                        </div>
+                    }
+                }
+            }
+            else
+            {
+                <div class="no-materials">
+                    <i class="fas fa-file fa-2x" style="margin-bottom: 10px;"></i><br>
+                    No hay archivos disponibles para esta actividad.
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Botón Volver -->
+    <div style="margin-top: 30px; text-align: center;">
+        <button onclick="history.back()" class="btn-descargar" style="background-color: #6c757d;">
+            <i class="fas fa-arrow-left"></i> Volver
+        </button>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Función para confirmar descargas
+        document.querySelectorAll('.btn-descargar').forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                const materialItem = this.closest('.material-item');
+                const nombre = materialItem.querySelector('.material-nombre').textContent.trim();
+                if (!confirm(`¿Está seguro de que desea descargar "${nombre}"?`)) {
+                    e.preventDefault();
+                }
+            });
+        });
+
+        // Función para abrir enlaces
+        document.querySelectorAll('.btn-abrir').forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                const materialItem = this.closest('.material-item');
+                const nombre = materialItem.querySelector('.material-nombre').textContent.trim();
+                if (!confirm(`¿Está seguro de que desea abrir "${nombre}"?`)) {
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+}

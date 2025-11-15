@@ -12,6 +12,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using static ElOlivo.Servicios.AutenticationAttribute;
+using ElOlivo.Servicios;
 
 namespace ElOlivo.Controllers
 {
@@ -20,11 +21,13 @@ namespace ElOlivo.Controllers
     {
 
         private readonly ILogger<AdminController> _logger;
+        private readonly SupabaseService _supabaseService;
         private readonly ElOlivoDbContext _elOlivoDbContext;
 
-        public AdminController(ILogger<AdminController> logger, ElOlivoDbContext elOlivoDbContext)
+        public AdminController(ILogger<AdminController> logger, SupabaseService supabaseService, ElOlivoDbContext elOlivoDbContext)
         {
             _elOlivoDbContext = elOlivoDbContext;
+            _supabaseService = supabaseService;
             _logger = logger;
         }
 
@@ -338,7 +341,168 @@ namespace ElOlivo.Controllers
             }
         }
 
-       
+        [HttpPost]
+        public async Task<IActionResult> EnviarCertificados(int eventId, string? search, int? estadoInscripcion, string? asistenciaApto, DateTime? fechaDesde, DateTime? fechaHasta)
+        {
+            try
+            {
+                int? usuarioAdminId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioAdminId == null)
+                    return Json(new { success = false, mensaje = "No autenticado" });
+
+                var evento = await _elOlivoDbContext.evento.FindAsync(eventId);
+                if (evento == null || evento.usuarioadminid != usuarioAdminId)
+                    return Json(new { success = false, mensaje = "Evento no encontrado o no autorizado" });
+
+                var umbralApto = 75.0;
+
+                // Obtener inscripciones con los mismos filtros de GestionUsuarios
+                var inscripcionesQuery = from i in _elOlivoDbContext.inscripcion
+                                         join u in _elOlivoDbContext.usuario on i.usuarioid equals u.usuarioid
+                                         join e in _elOlivoDbContext.evento on i.eventoid equals e.eventoid
+                                         where i.eventoid == eventId
+                                         select new
+                                         {
+                                             InscripcionId = i.inscripcionid,
+                                             UsuarioId = u.usuarioid,
+                                             i.estadoid,
+                                             i.fecha_inscripcion,
+                                             EventoId = e.eventoid
+                                         };
+
+                // Aplicar filtros
+                if (!string.IsNullOrEmpty(search))
+                {
+                    string searchLower = search.ToLower();
+                    var usuariosIds = await _elOlivoDbContext.usuario
+                        .Where(u => (u.nombre + " " + u.apellido).ToLower().Contains(searchLower) ||
+                                   u.email.ToLower().Contains(searchLower))
+                        .Select(u => u.usuarioid)
+                        .ToListAsync();
+                    inscripcionesQuery = inscripcionesQuery.Where(x => usuariosIds.Contains(x.UsuarioId));
+                }
+
+                if (estadoInscripcion.HasValue)
+                    inscripcionesQuery = inscripcionesQuery.Where(x => x.estadoid == estadoInscripcion.Value);
+
+                if (fechaDesde.HasValue)
+                {
+                    var fechaDesdeUtc = DateTime.SpecifyKind(fechaDesde.Value.Date, DateTimeKind.Utc);
+                    inscripcionesQuery = inscripcionesQuery.Where(x => x.fecha_inscripcion >= fechaDesdeUtc);
+                }
+
+                if (fechaHasta.HasValue)
+                {
+                    var fechaHastaUtc = DateTime.SpecifyKind(fechaHasta.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
+                    inscripcionesQuery = inscripcionesQuery.Where(x => x.fecha_inscripcion <= fechaHastaUtc);
+                }
+
+                var inscripciones = await inscripcionesQuery.ToListAsync();
+
+                // Obtener sesiones del evento
+                var sesiones = await _elOlivoDbContext.sesion
+                    .Where(s => s.eventoid == eventId)
+                    .ToListAsync();
+
+                if (!sesiones.Any())
+                    return Json(new { success = false, mensaje = "El evento no tiene sesiones registradas" });
+
+                var totalSesiones = sesiones.Count;
+
+                // Obtener asistencias
+                var asistenciasEventos = await (from a in _elOlivoDbContext.asistencia
+                                                join s in _elOlivoDbContext.sesion on a.sesionid equals s.sesionid
+                                                where s.eventoid == eventId && a.usuarioid.HasValue
+                                                select new
+                                                {
+                                                    UsuarioId = a.usuarioid.Value,
+                                                    SesionId = a.sesionid.Value
+                                                }).ToListAsync();
+
+                int certificadosCreados = 0;
+                int certificadosExistentes = 0;
+                int usuariosNoAptos = 0;
+
+                // Obtener el estado "Emitido" (estadoid = 8)
+                var estadoEmitido = await _elOlivoDbContext.estado
+                    .FirstOrDefaultAsync(e => e.estadoid == 8);
+
+                if (estadoEmitido == null)
+                    return Json(new { success = false, mensaje = "No se encontró el estado 'Emitido' (ID: 8) en la base de datos" });
+
+                foreach (var inscripcion in inscripciones)
+                {
+                    // Calcular porcentaje de asistencia
+                    int asistencias = asistenciasEventos.Count(a => a.UsuarioId == inscripcion.UsuarioId);
+                    double porcentajeAsistencia = totalSesiones > 0 ? Math.Round((asistencias * 100.0) / totalSesiones, 1) : 0;
+                    bool esApto = porcentajeAsistencia >= umbralApto;
+
+                    // Aplicar filtro de aptitud si existe
+                    if (!string.IsNullOrEmpty(asistenciaApto))
+                    {
+                        if ((asistenciaApto == "Apto" && !esApto) || (asistenciaApto == "No Apto" && esApto))
+                            continue;
+                    }
+
+                    // Solo crear certificados para usuarios APTOS
+                    if (!esApto)
+                    {
+                        usuariosNoAptos++;
+                        continue;
+                    }
+
+                    // Crear un certificado por cada sesión del evento
+                    foreach (var sesion in sesiones)
+                    {
+                        // Verificar si ya existe un certificado para este usuario y sesión
+                        var certificadoExistente = await _elOlivoDbContext.certificado
+                            .FirstOrDefaultAsync(c => c.usuarioid == inscripcion.UsuarioId &&
+                                                    c.sesionid == sesion.sesionid);
+
+                        if (certificadoExistente != null)
+                        {
+                            certificadosExistentes++;
+                            continue;
+                        }
+
+                        // Generar código único
+                        string codigoUnico = $"CERT-{eventId}-{sesion.sesionid}-{inscripcion.UsuarioId}-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
+
+                        // Crear nuevo certificado
+                        var nuevoCertificado = new certificado
+                        {
+                            codigo_unico = codigoUnico,
+                            fecha_emision = DateTime.UtcNow,
+                            estadoid = 8, // Emitido
+                            usuarioid = inscripcion.UsuarioId,
+                            sesionid = sesion.sesionid
+                        };
+
+                        _elOlivoDbContext.certificado.Add(nuevoCertificado);
+                        certificadosCreados++;
+                    }
+                }
+
+                // Guardar todos los certificados
+                await _elOlivoDbContext.SaveChangesAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    mensaje = $"Proceso completado: {certificadosCreados} certificados creados, {certificadosExistentes} ya existían, {usuariosNoAptos} usuarios no aptos",
+                    certificadosCreados = certificadosCreados,
+                    certificadosExistentes = certificadosExistentes,
+                    usuariosNoAptos = usuariosNoAptos
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al enviar certificados");
+                return Json(new { success = false, mensaje = $"Error: {ex.Message}" });
+            }
+        }
+
+
         public async Task<IActionResult> VerSesiones(int id) // id es eventoid
         {
             var usuarioAdminId = HttpContext.Session.GetInt32("usuarioId");
@@ -418,23 +582,50 @@ namespace ElOlivo.Controllers
 
         public ActionResult GetEventos()
         {
-            var sesiones = _elOlivoDbContext.sesion.ToList();
-
-            var data = sesiones.Select(e => new
+            try
             {
-                id = e.sesionid,
-                title = e.titulo,
-                start = e.fecha_inicio.HasValue
-                    ? e.fecha_inicio.Value.ToString("yyyy-MM-ddTHH:mm:ss")
-                    : null,
-                end = e.fecha_fin.HasValue
-                    ? e.fecha_fin.Value.ToString("yyyy-MM-ddTHH:mm:ss")
-                    : null,
-                color = "#007bff",
-                allDay = false
-            });
+                // Obtener sesiones activas de eventos que no estén cancelados
+                var sesiones = (from s in _elOlivoDbContext.sesion
+                                join e in _elOlivoDbContext.evento on s.eventoid equals e.eventoid
+                                where s.activo == true
+                                   && e.estadoid != 5 // Excluir eventos cancelados
+                                select new
+                                {
+                                    s.sesionid,
+                                    s.titulo,
+                                    s.fecha_inicio,
+                                    s.fecha_fin,
+                                    EstadoEvento = e.estadoid
+                                })
+                               .ToList();
 
-            return Json(data);
+                var data = sesiones.Select(e => new
+                {
+                    id = e.sesionid,
+                    title = e.titulo,
+                    start = e.fecha_inicio.HasValue
+                        ? e.fecha_inicio.Value.ToString("yyyy-MM-ddTHH:mm:ss")
+                        : null,
+                    end = e.fecha_fin.HasValue
+                        ? e.fecha_fin.Value.ToString("yyyy-MM-ddTHH:mm:ss")
+                        : null,
+                    // Color diferente según el estado del evento
+                    color = e.EstadoEvento switch
+                    {
+                        4 => "#6c757d", // Finalizado - Gris
+                        6 => "#ffc107", // Inscripción Cerrada - Amarillo
+                        _ => "#007bff"  // Abierto - Azul
+                    },
+                    allDay = false
+                });
+
+                return Json(data);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener eventos para el calendario");
+                return Json(new List<object>());
+            }
         }
 
         //
@@ -1719,6 +1910,39 @@ namespace ElOlivo.Controllers
             }
         }
 
+        // Nueva acción para redirigir desde sesionid a eventoid
+        public async Task<IActionResult> RedirigirAVerSesiones(int id) // id es sesionid
+        {
+            var usuarioAdminId = HttpContext.Session.GetInt32("usuarioId");
+            if (usuarioAdminId == null)
+                return RedirectToAction("Login", "Account");
+
+            // Obtener el eventoid de la sesión
+            var sesion = await _elOlivoDbContext.sesion
+                .Where(s => s.sesionid == id)
+                .Select(s => new { s.sesionid, s.eventoid })
+                .FirstOrDefaultAsync();
+
+            if (sesion == null || !sesion.eventoid.HasValue)
+            {
+                TempData["ErrorMessage"] = "Sesión no encontrada";
+                return RedirectToAction("GestionEventos");
+            }
+
+            // Verificar que el evento pertenezca al administrador
+            var eventoPerteneceAlAdmin = await _elOlivoDbContext.evento
+                .AnyAsync(e => e.eventoid == sesion.eventoid.Value && e.usuarioadminid == usuarioAdminId);
+
+            if (!eventoPerteneceAlAdmin)
+            {
+                TempData["ErrorMessage"] = "No tiene permisos para ver este evento";
+                return RedirectToAction("GestionEventos");
+            }
+
+            // Redirigir a VerSesiones con el eventoid
+            return RedirectToAction("VerSesiones", new { id = sesion.eventoid.Value });
+        }
+
         //
 
 
@@ -1782,18 +2006,18 @@ namespace ElOlivo.Controllers
             if (sesion == null || sesion.eventoid != eventoId)
                 return RedirectToAction("VerSesiones", new { id = eventoId });
 
+            // VERIFICACIÓN: Si el evento está Finalizado (estadoid = 4), no permitir edición
+            bool eventoFinalizado = evento.estadoid == 4;
+            ViewBag.EventoFinalizado = eventoFinalizado;
+
             ViewBag.Evento = evento;
             ViewBag.Sesion = sesion;
             ViewBag.EventoId = eventoId;
 
-
             // 2. OBTENER INSCRITOS EN EL EVENTO (SOLO CONFIRMADOS: estadoid == 2)
             var inscritos = await (from i in _elOlivoDbContext.inscripcion
                                    join u in _elOlivoDbContext.usuario on i.usuarioid equals u.usuarioid
-                                   // Filtramos por el ID del Evento
-                                   where i.eventoid == eventoId
-                                   // Filtramos por el estado Confirmada
-                                   && i.estadoid == 2
+                                   where i.eventoid == eventoId && i.estadoid == 2
                                    select new
                                    {
                                        i.inscripcionid,
@@ -1821,13 +2045,11 @@ namespace ElOlivo.Controllers
             // 5. Manejo de alumnos no encontrados
             if (!modeloAsistencia.Any())
             {
-                // Se envía este mensaje si la lista está vacía
                 ViewBag.MensajeNoAlumnos = $"No hay usuarios con inscripción CONFIRMADA (Estado ID 2) para el evento '{evento.nombre}'.";
             }
 
             ViewData["Title"] = $"Asistencia: {sesion.titulo}";
 
-            // Usará GestionAsistencias.cshtml por convención
             return View(modeloAsistencia);
         }
 
@@ -1835,6 +2057,13 @@ namespace ElOlivo.Controllers
         [HttpPost]
         public async Task<IActionResult> GuardarAsistencias(int sesionId, int eventoId, List<int>? asistieron)
         {
+            // VERIFICACIÓN: Si el evento está Finalizado, no permitir guardar cambios
+            var evento = await _elOlivoDbContext.evento.FindAsync(eventoId);
+            if (evento == null || evento.estadoid == 4)
+            {
+                TempData["MensajeError"] = "No se puede modificar la asistencia porque el evento está FINALIZADO.";
+                return RedirectToAction("GestionAsistencias", new { eventoId = eventoId, sesionId = sesionId });
+            }
 
             // 1. Obtener asistencias EXISTENTES para esta sesión
             var asistenciasSesion = await _elOlivoDbContext.asistencia
@@ -1846,7 +2075,6 @@ namespace ElOlivo.Controllers
 
             // 2. Determinar cuáles eliminar (Estaban marcados, ahora no)
             var aEliminar = asistenciasSesion
-                // Usamos HasValue y .Value para manejar el int?
                 .Where(a => a.usuarioid.HasValue && !asistieronSet.Contains(a.usuarioid.Value))
                 .ToList();
 
@@ -1856,10 +2084,14 @@ namespace ElOlivo.Controllers
                 .Select(a => a.usuarioid.Value)
                 .ToHashSet();
 
-            // Nota: Usamos fecha_hora_registro en lugar de fecha_asistencia
             var aAgregar = asistieronSet
                 .Where(usuarioId => !existentesSet.Contains(usuarioId))
-                .Select(usuarioId => new asistencia { sesionid = sesionId, usuarioid = usuarioId, fecha_hora_registro = DateTime.UtcNow })
+                .Select(usuarioId => new asistencia
+                {
+                    sesionid = sesionId,
+                    usuarioid = usuarioId,
+                    fecha_hora_registro = DateTime.UtcNow
+                })
                 .ToList();
 
             // 4. Ejecutar cambios
@@ -1870,6 +2102,124 @@ namespace ElOlivo.Controllers
 
             TempData["MensajeExito"] = "Asistencia guardada correctamente.";
             return RedirectToAction("GestionAsistencias", new { eventoId = eventoId, sesionId = sesionId });
+        }
+
+
+        [HttpPost]
+        public async Task<IActionResult> CambiarEstadoEvento(int eventoId, int estadoId)
+        {
+            // Usar una transacción para asegurar la consistencia de datos
+            using var transaction = await _elOlivoDbContext.Database.BeginTransactionAsync();
+
+            try
+            {
+                int? usuarioAdminId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioAdminId == null)
+                    return Json(new { success = false, mensaje = "No autenticado" });
+
+                // Verificar que el evento pertenece al administrador
+                var evento = await _elOlivoDbContext.evento
+                    .FirstOrDefaultAsync(e => e.eventoid == eventoId && e.usuarioadminid == usuarioAdminId);
+
+                if (evento == null)
+                    return Json(new { success = false, mensaje = "Evento no encontrado o no autorizado" });
+
+                // VERIFICACIÓN: Si el evento ya está Cancelado (5) o Finalizado (4), no permitir cambios
+                if (evento.estadoid == 4 || evento.estadoid == 5)
+                {
+                    string estadoActual = evento.estadoid == 4 ? "Finalizado" : "Cancelado";
+                    return Json(new
+                    {
+                        success = false,
+                        mensaje = $"No se puede cambiar el estado de un evento {estadoActual.ToLower()}. El evento ya está {estadoActual.ToLower()}."
+                    });
+                }
+
+                // Verificar que el estado existe
+                var estado = await _elOlivoDbContext.estado
+                    .FirstOrDefaultAsync(e => e.estadoid == estadoId);
+
+                if (estado == null)
+                    return Json(new { success = false, mensaje = "Estado no válido" });
+
+                // Cambiar el estado del evento
+                evento.estadoid = estadoId;
+
+                int inscripcionesCanceladas = 0;
+                int actividadesDesactivadas = 0;
+                int sesionesDesactivadas = 0;
+
+                // Si el evento se cancela (estadoId = 5), cancelar inscripciones y desactivar actividades/sesiones
+                if (estadoId == 5) // Cancelado
+                {
+                    // 1. Cancelar todas las inscripciones del evento (enfoque tradicional)
+                    var inscripciones = await _elOlivoDbContext.inscripcion
+                        .Where(i => i.eventoid == eventoId)
+                        .ToListAsync();
+
+                    inscripcionesCanceladas = inscripciones.Count;
+
+                    foreach (var inscripcion in inscripciones)
+                    {
+                        inscripcion.estadoid = 1; // Cancelada
+                    }
+
+                    // 2. Desactivar todas las sesiones del evento
+                    var sesiones = await _elOlivoDbContext.sesion
+                        .Where(s => s.eventoid == eventoId && s.activo == true)
+                        .ToListAsync();
+
+                    sesionesDesactivadas = sesiones.Count;
+
+                    foreach (var sesion in sesiones)
+                    {
+                        sesion.activo = false;
+                    }
+
+                    // 3. Desactivar todas las actividades de las sesiones del evento
+                    var sesionesIds = sesiones.Select(s => s.sesionid).ToList();
+
+                    if (sesionesIds.Any())
+                    {
+                        var actividades = await _elOlivoDbContext.actividad
+                            .Where(a => sesionesIds.Contains(a.sesionid.Value) && a.activo == true)
+                            .ToListAsync();
+
+                        actividadesDesactivadas = actividades.Count;
+
+                        foreach (var actividad in actividades)
+                        {
+                            actividad.activo = false;
+                        }
+                    }
+                }
+
+                // Guardar todos los cambios
+                await _elOlivoDbContext.SaveChangesAsync();
+
+                // Confirmar la transacción
+                await transaction.CommitAsync();
+
+                // Mensaje según el estado
+                string mensaje = estadoId switch
+                {
+                    3 => "Evento marcado como Abierto",
+                    4 => "Evento marcado como Finalizado",
+                    5 => $"Evento cancelado. Se cancelaron {inscripcionesCanceladas} inscripciones, se desactivaron {sesionesDesactivadas} sesiones y {actividadesDesactivadas} actividades.",
+                    6 => "Evento marcado como Inscripción Cerrada",
+                    _ => "Estado del evento actualizado"
+                };
+
+                return Json(new { success = true, mensaje = mensaje });
+            }
+            catch (Exception ex)
+            {
+                // Revertir la transacción en caso de error
+                await transaction.RollbackAsync();
+
+                _logger.LogError(ex, "Error al cambiar estado del evento {EventoId} a {EstadoId}", eventoId, estadoId);
+                return Json(new { success = false, mensaje = $"Error interno: {ex.Message}" });
+            }
         }
 
 
@@ -2446,7 +2796,319 @@ namespace ElOlivo.Controllers
             return File(pdfBytes, "application/pdf", $"Reporte_Asistencia_{sesionId}_{DateTime.Now:yyyyMMddHHmmss}.pdf");
         }
 
+        // Agregar al final de AdminController.cs
 
+        // ============================================
+        // GESTIÓN DE ACTIVIDADES CON ARCHIVOS Y LINKS
+        // ============================================
+
+        public async Task<IActionResult> GestionActividad(int id)
+        {
+            try
+            {
+                var usuarioAdminId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioAdminId == null)
+                    return RedirectToAction("Login", "Account");
+
+                // Obtener actividad con información relacionada
+                var actividad = await (from a in _elOlivoDbContext.actividad
+                                       join u in _elOlivoDbContext.usuario on a.ponenteid equals u.usuarioid
+                                       join ta in _elOlivoDbContext.tipoactividad on a.tipoactividadid equals ta.tipoactividadid into taGroup
+                                       from ta in taGroup.DefaultIfEmpty()
+                                       join s in _elOlivoDbContext.sesion on a.sesionid equals s.sesionid
+                                       join e in _elOlivoDbContext.evento on s.eventoid equals e.eventoid
+                                       where a.agendaid == id && e.usuarioadminid == usuarioAdminId
+                                       select new
+                                       {
+                                           AgendaId = a.agendaid,
+                                           Nombre = a.nombre,
+                                           Descripcion = a.descripcion,
+                                           Inicio = a.hora_inicio,
+                                           Fin = a.hora_fin,
+                                           Ponente = u.nombre + " " + u.apellido,
+                                           Actividad = ta != null ? ta.nombre : "Sin tipo",
+                                           Estado = a.activo,
+                                           SesionId = s.sesionid,
+                                           EventoId = e.eventoid
+                                       }).FirstOrDefaultAsync();
+
+                if (actividad == null)
+                {
+                    TempData["ErrorMessage"] = "Actividad no encontrada o no tiene permisos para editarla";
+                    return RedirectToAction("VerSesiones");
+                }
+
+                // Obtener materiales (archivos y links)
+                var materiales = await (from m in _elOlivoDbContext.material
+                                        join ta in _elOlivoDbContext.tipo_archivo on m.tipo_archivoid equals ta.tipo_archivoid
+                                        where m.agendaid == id
+                                        orderby m.fecha_subida descending
+                                        select new
+                                        {
+                                            m.materialid,
+                                            m.nombre,
+                                            m.url_archivo,
+                                            m.fecha_subida,
+                                            m.publico,
+                                            TipoNombre = ta.nombre,
+                                            EsLink = ta.nombre == "Link" || ta.nombre == "URL"
+                                        }).ToListAsync();
+
+                ViewBag.Actividad = actividad;
+                ViewBag.Materiales = materiales;
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar actividad {Id}", id);
+                return Content(ex.ToString());
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AgregarLink(int agendaid, string nombre, string url)
+        {
+            try
+            {
+                var usuarioAdminId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioAdminId == null)
+                    return Json(new { success = false, mensaje = "No autenticado" });
+
+                // Validar que la actividad pertenece a un evento del admin
+                var esValido = await (from a in _elOlivoDbContext.actividad
+                                      join s in _elOlivoDbContext.sesion on a.sesionid equals s.sesionid
+                                      join e in _elOlivoDbContext.evento on s.eventoid equals e.eventoid
+                                      where a.agendaid == agendaid && e.usuarioadminid == usuarioAdminId
+                                      select e.eventoid).AnyAsync();
+
+                if (!esValido)
+                    return Json(new { success = false, mensaje = "No tiene permisos para editar esta actividad" });
+
+                // Obtener o crear el tipo de archivo "Link"
+                var tipoLink = await _elOlivoDbContext.tipo_archivo
+                    .FirstOrDefaultAsync(t => t.nombre == "Link" || t.nombre == "URL");
+
+                if (tipoLink == null)
+                {
+                    tipoLink = new tipo_archivo { nombre = "Link" };
+                    _elOlivoDbContext.tipo_archivo.Add(tipoLink);
+                    await _elOlivoDbContext.SaveChangesAsync();
+                }
+
+                // Crear el material
+                var nuevoMaterial = new material
+                {
+                    nombre = nombre,
+                    url_archivo = url,
+                    tipo_archivoid = tipoLink.tipo_archivoid,
+                    fecha_subida = DateTime.UtcNow,
+                    publico = true,
+                    agendaid = agendaid
+                };
+
+                _elOlivoDbContext.material.Add(nuevoMaterial);
+                await _elOlivoDbContext.SaveChangesAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    mensaje = "Link agregado correctamente",
+                    materialid = nuevoMaterial.materialid
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al agregar link");
+                return Json(new { success = false, mensaje = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SubirArchivo(int agendaid, IFormFile archivo)
+        {
+            try
+            {
+                var usuarioAdminId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioAdminId == null)
+                    return Json(new { success = false, mensaje = "No autenticado" });
+
+                if (archivo == null || archivo.Length == 0)
+                    return Json(new { success = false, mensaje = "No se recibió ningún archivo" });
+
+                // Validar que la actividad pertenece a un evento del admin
+                var esValido = await (from a in _elOlivoDbContext.actividad
+                                      join s in _elOlivoDbContext.sesion on a.sesionid equals s.sesionid
+                                      join e in _elOlivoDbContext.evento on s.eventoid equals e.eventoid
+                                      where a.agendaid == agendaid && e.usuarioadminid == usuarioAdminId
+                                      select e.eventoid).AnyAsync();
+
+                if (!esValido)
+                    return Json(new { success = false, mensaje = "No tiene permisos para editar esta actividad" });
+
+                // Validar extensión
+                var extension = Path.GetExtension(archivo.FileName).ToLowerInvariant();
+                var extensionesPermitidas = new[] { ".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx", ".zip", ".rar" };
+
+                if (!extensionesPermitidas.Contains(extension))
+                    return Json(new { success = false, mensaje = "Tipo de archivo no permitido" });
+
+                // Validar tamaño (máximo 10MB)
+                if (archivo.Length > 10 * 1024 * 1024)
+                    return Json(new { success = false, mensaje = "El archivo no puede ser mayor a 10MB" });
+
+                // Determinar tipo de archivo
+                var tipoNombre = extension switch
+                {
+                    ".pdf" => "PDF",
+                    ".doc" or ".docx" => "Word",
+                    ".ppt" or ".pptx" => "PowerPoint",
+                    ".xls" or ".xlsx" => "Excel",
+                    ".zip" or ".rar" => "Comprimido",
+                    _ => "Documento"
+                };
+
+                var tipoArchivo = await _elOlivoDbContext.tipo_archivo
+                    .FirstOrDefaultAsync(t => t.nombre == tipoNombre);
+
+                if (tipoArchivo == null)
+                {
+                    tipoArchivo = new tipo_archivo { nombre = tipoNombre };
+                    _elOlivoDbContext.tipo_archivo.Add(tipoArchivo);
+                    await _elOlivoDbContext.SaveChangesAsync();
+                }
+
+                // Generar nombre único para el archivo
+                var nombreArchivo = $"actividad_{agendaid}_{Guid.NewGuid()}{extension}";
+
+                // Subir a Supabase bucket "files"
+                var urlArchivo = await _supabaseService.SubirArchivoFiles(archivo, nombreArchivo);
+
+                if (string.IsNullOrEmpty(urlArchivo))
+                    return Json(new { success = false, mensaje = "Error al subir el archivo" });
+
+                // Crear el material
+                var nuevoMaterial = new material
+                {
+                    nombre = archivo.FileName,
+                    url_archivo = urlArchivo,
+                    tipo_archivoid = tipoArchivo.tipo_archivoid,
+                    fecha_subida = DateTime.UtcNow,
+                    publico = true,
+                    agendaid = agendaid
+                };
+
+                _elOlivoDbContext.material.Add(nuevoMaterial);
+                await _elOlivoDbContext.SaveChangesAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    mensaje = "Archivo subido correctamente",
+                    materialid = nuevoMaterial.materialid,
+                    nombre = archivo.FileName,
+                    url = urlArchivo
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al subir archivo");
+                return Json(new { success = false, mensaje = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> EliminarMaterial(int materialid)
+        {
+            try
+            {
+                var usuarioAdminId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioAdminId == null)
+                    return Json(new { success = false, mensaje = "No autenticado" });
+
+                // Validar permisos
+                var material = await (from m in _elOlivoDbContext.material
+                                      join a in _elOlivoDbContext.actividad on m.agendaid equals a.agendaid
+                                      join s in _elOlivoDbContext.sesion on a.sesionid equals s.sesionid
+                                      join e in _elOlivoDbContext.evento on s.eventoid equals e.eventoid
+                                      where m.materialid == materialid && e.usuarioadminid == usuarioAdminId
+                                      select m).FirstOrDefaultAsync();
+
+                if (material == null)
+                    return Json(new { success = false, mensaje = "Material no encontrado o sin permisos" });
+
+                // Si es un archivo (no link), eliminar de Supabase
+                var tipoArchivo = await _elOlivoDbContext.tipo_archivo
+                    .FirstOrDefaultAsync(t => t.tipo_archivoid == material.tipo_archivoid);
+
+                if (tipoArchivo != null && tipoArchivo.nombre != "Link" && tipoArchivo.nombre != "URL")
+                {
+                    var nombreArchivo = ObtenerNombreArchivoDesdeUrl(material.url_archivo);
+                    if (!string.IsNullOrEmpty(nombreArchivo))
+                    {
+                        await _supabaseService.EliminarArchivoFiles(nombreArchivo);
+                    }
+                }
+
+                // Eliminar de la base de datos
+                _elOlivoDbContext.material.Remove(material);
+                await _elOlivoDbContext.SaveChangesAsync();
+
+                return Json(new { success = true, mensaje = "Material eliminado correctamente" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar material");
+                return Json(new { success = false, mensaje = ex.Message });
+            }
+        }
+
+        private string ObtenerNombreArchivoDesdeUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return null;
+
+            try
+            {
+                var uri = new Uri(url);
+                return Path.GetFileName(uri.LocalPath);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> EditarActividad(int agendaid, string nombre, string descripcion)
+        {
+            try
+            {
+                var usuarioAdminId = HttpContext.Session.GetInt32("usuarioId");
+                if (usuarioAdminId == null)
+                    return Json(new { success = false, mensaje = "No autenticado" });
+
+                // Validar permisos
+                var actividad = await (from a in _elOlivoDbContext.actividad
+                                       join s in _elOlivoDbContext.sesion on a.sesionid equals s.sesionid
+                                       join e in _elOlivoDbContext.evento on s.eventoid equals e.eventoid
+                                       where a.agendaid == agendaid && e.usuarioadminid == usuarioAdminId
+                                       select a).FirstOrDefaultAsync();
+
+                if (actividad == null)
+                    return Json(new { success = false, mensaje = "Actividad no encontrada o sin permisos" });
+
+                actividad.nombre = nombre;
+                actividad.descripcion = descripcion;
+
+                await _elOlivoDbContext.SaveChangesAsync();
+
+                return Json(new { success = true, mensaje = "Actividad actualizada correctamente" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al editar actividad");
+                return Json(new { success = false, mensaje = ex.Message });
+            }
+        }
 
     }
 }

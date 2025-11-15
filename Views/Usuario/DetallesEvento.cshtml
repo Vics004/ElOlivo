@@ -226,7 +226,27 @@
 
                 <div class="info-item">
                     <span class="info-label">👥 Capacidad</span>
-                    <span class="info-value">@eventoCapacidad participantes</span>
+                    <span class="info-value">
+                        @evento.TotalInscritos de @eventoCapacidad participantes
+                        @if (ViewBag.CapacidadAlcanzada == true)
+                        {
+                            <span style="color: #dc3545; font-weight: bold;"> - CAPACIDAD MÁXIMA ALCANZADA</span>
+                        }
+                    </span>
+                </div>
+
+                <div class="info-item">
+                    <span class="info-label">📊 Estado de Inscripciones</span>
+                    <span class="info-value">
+                        @if (ViewBag.CapacidadAlcanzada == true || evento?.EstadoId == 6)
+                        {
+                            <span style="color: #dc3545; font-weight: bold;">🚫 CERRADAS</span>
+                        }
+                        else
+                        {
+                            <span style="color: #28a745; font-weight: bold;">✅ ABIERTAS</span>
+                        }
+                    </span>
                 </div>
             </div>
 
@@ -237,11 +257,35 @@
         </div>
 
         <!-- Botón de inscripción -->
-        @if (yaInscrito)
+        @if (ViewBag.YaInscrito == true)
         {
             <button class="btn-ya-inscrito" disabled>
                 ✅ Ya estás inscrito
             </button>
+        }
+        else if (ViewBag.InscripcionCancelada == true)
+        {
+            <form asp-action="InscribirseEvento" method="post">
+                <input type="hidden" name="eventoid" value="@eventoid" />
+                <button type="submit" class="btn-inscribirse">
+                    🔄 Volver a Inscribirse
+                </button>
+            </form>
+            <div style="margin-top: 10px; color: #856404; background-color: #fff3cd; padding: 10px; border-radius: 5px;">
+                <strong>⚠️ Inscripción anterior cancelada</strong>
+                <p style="margin: 5px 0 0 0; font-size: 0.9rem;">
+                    Habías cancelado tu inscripción anterior. Puedes volver a inscribirte si hay cupos disponibles.
+                </p>
+            </div>
+        }
+        else if (ViewBag.CapacidadAlcanzada == true || evento?.EstadoId == 6)
+        {
+            <button class="btn-ya-inscrito" disabled>
+                🚫 Inscripciones Cerradas
+            </button>
+            <div class="alert alert-error" style="margin-top: 10px;">
+                El evento ha alcanzado su capacidad máxima de @eventoCapacidad participantes.
+            </div>
         }
         else if (eventoid > 0)
         {
@@ -251,6 +295,11 @@
                     📝 Inscribirse al Evento
                 </button>
             </form>
+
+            <!-- Mostrar información de capacidad -->
+            <div style="margin-top: 10px; color: #6b7280; font-size: 0.9rem;">
+                @evento.TotalInscritos de @eventoCapacidad inscritos
+            </div>
         }
 
         <!-- Agenda de Sesiones con Calendario -->
