@@ -119,17 +119,100 @@ else
                     </span>
                 </div>
 
-                <!-- Acciones -->
-                <div class="evento-item">
-                    <span class="evento-item-label">Acciones</span>
-                    <div class="evento-acciones">
-                        <button type="button" class="btn btn-success">Detalles del Evento</button>
-                        <button type="button" class="btn btn-primary">Descargar</button>
-                    </div>
+				<div class="evento-acciones">
+					
+                    @if (certificado.EstadoId == 8)
+                    {
+                        <a asp-action="Certificado" asp-route-id="@certificado.certificadoid"
+                           class="btn btn-primary btn-sm btn-certificado"
+                           data-certificado-id="@certificado.certificadoid">
+                            Descargar
+                        </a>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-secondary btn-sm" disabled>
+                            No disponible
+                        </button>
+                    }
                 </div>
             </div>
         }
     </div>
+    <div class="modal fade" id="certificadoModal" tabindex="-1" aria-labelledby="certificadoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content" id="certificadoModalContent">
+                <!-- El contenido se cargará aquí via AJAX -->
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        // Manejar clic en botones de certificado
+        $(document).on('click', '.btn-certificado', function (e) {
+            e.preventDefault();
+
+            var btn = $(this);
+            var url = btn.attr('href');
+            var certificadoId = btn.data('certificado-id');
+
+            console.log('Cargando certificado:', certificadoId);
+
+            // Mostrar loading en el modal
+            $('#certificadoModalContent').html(`
+                        <div class="modal-header">
+                            <h5 class="modal-title">Cargando certificado...</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="mt-2">Cargando certificado, por favor espere...</p>
+                        </div>
+                    `);
+
+            // Mostrar el modal
+            var certificadoModal = new bootstrap.Modal(document.getElementById('certificadoModal'));
+            certificadoModal.show();
+
+            // Cargar el contenido del certificado via AJAX
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function (data) {
+                    console.log('Certificado cargado exitosamente');
+                    $('#certificadoModalContent').html(data);
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error al cargar certificado:', error);
+                    $('#certificadoModalContent').html(`
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title">Error</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-danger">
+                                        <h5>Error al cargar el certificado</h5>
+                                        <p>No se pudo cargar el certificado. Por favor, intente nuevamente.</p>
+                                        <small>Error: ${error}</small>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                </div>
+                            `);
+                }
+            });
+        });
+
+        // Cerrar modal cuando se hace click en Cancelar
+        $(document).on('click', '[data-bs-dismiss="modal"]', function () {
+            $('#certificadoModal').modal('hide');
+        });
+    </script>
 }
 
 <style>

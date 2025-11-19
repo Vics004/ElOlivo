@@ -1,0 +1,659 @@
+﻿@{
+    
+    Layout = "_Layout_Admin";
+}
+
+<style>
+
+
+        .fondo-verde {
+            background-color: #5abf73;
+            width: calc(100% + 40px);
+            padding: 30px 20px;
+            margin-left: -20px;
+            margin-right: -20px;
+            margin-top: -45px;
+            margin-bottom: -45px;
+            min-height: calc(100vh - 60px);
+        }
+
+        .tarjeta-evento {
+            max-width: 650px;
+            width: 90%;
+            border-radius: 15px;
+            border: none;
+            margin: 0 auto;
+        }
+
+        .titulo-seccion {
+            color: #333;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .insignia-fase {
+            background-color: #6c75fb;
+            padding: 8px 15px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-radius: 10px;
+            color: white;
+        }
+
+       
+        .contenedor-sesiones {
+            border: 2px dashed #ccc; 
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .boton-agregar-sesion {
+            background-color: #6c75fb; 
+            border-color: #6c75fb;
+            font-weight: 600;
+        }
+
+        .boton-continuar-verde {
+            background-color: #8fbc8f; 
+            border-color: #8fbc8f;
+            color: white;
+            font-weight: 600;
+            padding: 10px 30px;
+            border-radius: 8px;
+        }
+
+            .boton-continuar-verde:hover {
+                background-color: #79a379;
+                border-color: #79a379;
+                color: white;
+            }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        .is-invalid {
+            border-color: #dc3545 !important;
+        }
+
+        .text-danger {
+            color: #dc3545 !important;
+        }
+
+        .text-success {
+            color: #28a745 !important;
+        }
+
+        .card-sesion {
+            border-left: 5px solid #4CAF50;
+            transition: all 0.3s ease;
+        }
+
+            .card-sesion:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+
+        .progress {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card {
+            border-radius: 10px;
+        }
+
+        .boton-agregar-sesion:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        @@keyframes shake {
+            0%, 100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-5px);
+            }
+
+            75% {
+                transform: translateX(5px);
+            }
+        }
+
+        .is-invalid {
+            animation: shake 0.5s;
+        }
+
+       
+        .progress-bar small {
+            color: #000 !important; 
+            text-shadow: 0 0 2px rgba(255, 255, 255, 0.7); 
+        }
+
+        .progress-bar bg-info small,
+        .progress-bar bg-success small {
+            color: #000 !important;
+            font-weight: 600 !important;
+        }
+
+        
+        .card-body .text-dark {
+            color: #333 !important;
+        }
+
+        .card-body .text-muted {
+            color: #6c757d !important;
+        }
+
+        .card-body .text-info {
+            color: #17a2b8 !important;
+        }
+
+        .card-body .text-success {
+            color: #28a745 !important;
+        }
+
+        #estadoCapacidad.badge-light {
+            color: #333 !important;
+        }
+
+      
+        .btn-atras {
+            background-color: #6c75fb; 
+            border-color: #6c75fb;
+            color: white;
+            font-weight: 600;
+            padding: 10px 30px;
+            border-radius: 8px;
+        }
+
+        .btn-atras:hover {
+            background-color: #5b63d9;
+            border-color: #5b63d9;
+            color: white;
+        }
+
+</style>
+
+
+
+<div class="fondo-verde">
+    <div class="card tarjeta-evento shadow-lg">
+        <div class="card-body p-5">
+
+            <h3 class="text-center mb-4 text-success font-weight-bold">Crear Nuevo Evento</h3>
+
+            <div class="d-flex justify-content-end mb-4">
+                <span class="insignia-fase">Fase 2 de 2</span>
+            </div>
+
+            <form id="formFase2">
+                <input type="hidden" id="eventFechaInicio" value="@ViewBag.FechaInicioEvento" />
+                <input type="hidden" id="eventHoraInicio" value="@ViewBag.HoraInicioEvento" />
+                <input type="hidden" id="eventFechaFin" value="@ViewBag.FechaFinEvento" />
+                <input type="hidden" id="eventHoraFin" value="@ViewBag.HoraFinEvento" />
+                <input type="hidden" id="sesionesJsonTemp" value="@ViewBag.SesionesTemp" />
+
+                <h5 class="titulo-seccion">Detalles de Ubicación y Capacidad</h5>
+
+                <div class="form-group">
+                    <label for="Direccion">Dirección</label>
+                    <textarea name="Direccion" class="form-control" id="Direccion" rows="3" placeholder="Ingrese la dirección del evento"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="CapacidadMaxima">Capacidad máxima</label>
+                    <input type="number" name="CapacidadMaxima" class="form-control" id="CapacidadMaxima" placeholder="Ingrese la cantidad máxima del evento" required>
+                    <small class="form-text text-muted">Esta capacidad será distribuida entre todas las sesiones</small>
+                </div>
+
+              
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <h6 class="card-title text-dark mb-3">
+                            <i class="fas fa-users mr-2 text-primary"></i>Distribución de Capacidad
+                        </h6>
+
+                       
+                        <div class="progress mb-3" style="height: 20px;">
+                            <div id="barraCapacidadUsada" class="progress-bar bg-info" role="progressbar" style="width: 0%">
+                                <small class="font-weight-bold">Usada: <span id="porcentajeUsado">0</span>%</small>
+                            </div>
+                            <div id="barraCapacidadDisponible" class="progress-bar bg-success" role="progressbar" style="width: 100%">
+                                <small class="font-weight-bold">Disponible: <span id="porcentajeDisponible">100</span>%</small>
+                            </div>
+                        </div>
+
+                      
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="text-dark font-weight-bold" id="capacidadMaximaValor">0</div>
+                                <small class="text-muted">Total</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-info font-weight-bold" id="capacidadUsada">0</div>
+                                <small class="text-muted">En uso</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-success font-weight-bold" id="capacidadDisponible">0</div>
+                                <small class="text-muted">Libre</small>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-2">
+                            <span id="estadoCapacidad" class="badge badge-light border">Esperando configuración...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="EstadoEvento">Estado del evento</label>
+                    <select name="EstadoEvento" class="form-control" id="EstadoEvento" disabled>
+                        <option value="Abierto" selected>Abierto</option>
+                    </select>
+                    <small class="form-text text-muted">Los eventos nuevos siempre se crean con estado "Abierto"</small>
+                </div>
+
+                <h5 class="titulo-seccion mt-5">Sesiones del evento</h5>
+
+                <div class="contenedor-sesiones mb-5">
+                   
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h6 class="font-weight-bold mb-0">Listado de Sesiones</h6>
+                        <button type="button" class="btn btn-primary boton-agregar-sesion">
+                            <i class="fas fa-plus"></i> Agregar sesión
+                        </button>
+                    </div>
+
+                   
+                    <div id="listaSesionesGuardadas" class="row">
+                       
+                    </div>
+
+                   
+                    <div id="mensaje-sesiones-vacio" class="text-center text-muted py-3" style="display:none;">
+                        <p class="mb-1">No hay sesiones agregadas aún</p>
+                        <small>Haz click en "Agregar sesión" para comenzar</small>
+                    </div>
+
+               
+                    @await Html.PartialAsync("_NuevaSesionModal")
+                </div>
+
+                <div class="d-flex justify-content-between mt-5">
+                    <button type="button" id="btnAtras" class="btn btn-atras">
+                        <i class="fas fa-arrow-left"></i> Atrás
+                    </button>
+
+                    <button type="button" id="btnContinuar" class="btn boton-continuar-verde">
+                        Continuar a planificación de actividades
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+     const btnContinuar = document.getElementById('btnContinuar');
+     const direccionInput = document.getElementById('Direccion');
+     const capacidadInput = document.getElementById('CapacidadMaxima');
+
+    
+     document.getElementById('EstadoEvento').value = 'Abierto';
+
+     
+     btnContinuar.disabled = false;
+
+     btnContinuar.addEventListener('click', function () {
+         const direccion = direccionInput.value.trim();
+         const capacidad = capacidadInput.value;
+
+         
+         if (!direccion) {
+             alert('Por favor ingrese la dirección del evento');
+             direccionInput.focus();
+             direccionInput.classList.add('is-invalid');
+             setTimeout(() => direccionInput.classList.remove('is-invalid'), 3000);
+             return;
+         }
+
+         
+         if (!capacidad || capacidad <= 0) {
+             alert('Por favor ingrese una capacidad máxima válida');
+             capacidadInput.focus();
+             capacidadInput.classList.add('is-invalid');
+             setTimeout(() => capacidadInput.classList.remove('is-invalid'), 3000);
+             return;
+         }
+
+        
+         sessionStorage.setItem('continuandoFase2', 'true');
+
+       
+         const formData = {
+             Direccion: direccion,
+             CapacidadMaxima: parseInt(capacidad),
+             EstadoEvento: 'Abierto'
+         };
+
+         
+         fetch('/Admin/GuardarEventoCompleto', {
+             method: 'POST',
+             headers: {
+                 'Content-Type': 'application/json',
+             },
+             credentials: 'same-origin',
+             body: JSON.stringify(formData)
+         })
+             .then(response => response.json())
+             .then(data => {
+                 
+                 if (data.success) {
+                     alert(data.mensaje || '¡Evento creado exitosamente!');
+                     window.location.href = '/Admin/PlanificacionActividades';
+                 } else {
+                     alert('Error al crear el evento: ' + (data.mensaje || 'Error desconocido'));
+                     
+                     sessionStorage.removeItem('continuandoFase2');
+                 }
+             })
+             .catch(error => {
+                 console.error('Error:', error);
+                 alert('Error al procesar la solicitud');
+           
+                 sessionStorage.removeItem('continuandoFase2');
+             });
+     });
+     });
+
+
+            
+                 document.getElementById('btnAtras').addEventListener('click', function() {
+                    
+                     fetch('/Admin/LimpiarSesionesTemp', {
+                         method: 'POST',
+                         headers: {
+                             'Content-Type': 'application/json',
+                         },
+                         credentials: 'same-origin'
+                     })
+                     .then(response => response.json())
+                     .then(data => {
+                        
+                        
+                         window.location.href = '/Admin/CrearEvento';
+                     })
+                     .catch(error => {
+                        
+                         window.location.href = '/Admin/CrearEvento';
+                     });
+                 });
+
+                         
+             window.addEventListener('beforeunload', function (e) {
+                 const estaContinuando = sessionStorage.getItem('continuandoFase2');
+
+                
+                 if (!estaContinuando) {
+                     
+                     navigator.sendBeacon('/Admin/LimpiarSesionesTemp');
+                 }
+             });
+
+                        
+             window.addEventListener('load', function() {
+                 
+                 sessionStorage.removeItem('continuandoFase2');
+                 sessionStorage.removeItem('yendoAtras');
+             });
+
+
+    
+     function cargarSesionesGuardadas() {
+         $.ajax({
+             url: '/Admin/ObtenerSesionesTemp',
+             type: 'GET',
+             success: function (response) {
+                 console.log('Sesiones obtenidas:', response);
+                 if (response.success) {
+                     mostrarSesionesEnLista(response.sesiones);
+                 }
+             },
+             error: function (error) {
+                 console.error('Error al cargar sesiones:', error);
+             }
+         });
+     }
+
+    
+     function actualizarCapacidadUsada(sesiones) {
+         let capacidadUsada = 0;
+         if (sesiones && sesiones.length > 0) {
+             sesiones.forEach(sesion => {
+                 capacidadUsada += parseInt(sesion.Capacidad) || 0;
+             });
+         }
+
+         const capacidadMaxima = parseInt($('#CapacidadMaxima').val()) || 0;
+         const capacidadDisponible = capacidadMaxima - capacidadUsada;
+
+        
+         $('#capacidadUsada').text(capacidadUsada);
+         $('#capacidadDisponible').text(capacidadDisponible);
+         $('#capacidadMaximaValor').text(capacidadMaxima);
+
+        
+         if (capacidadMaxima > 0) {
+             const porcentajeUsado = Math.round((capacidadUsada / capacidadMaxima) * 100);
+             const porcentajeDisponible = 100 - porcentajeUsado;
+
+             $('#barraCapacidadUsada').css('width', porcentajeUsado + '%');
+             $('#barraCapacidadDisponible').css('width', porcentajeDisponible + '%');
+             $('#porcentajeUsado').text(porcentajeUsado);
+             $('#porcentajeDisponible').text(porcentajeDisponible);
+         } else {
+             $('#barraCapacidadUsada').css('width', '0%');
+             $('#barraCapacidadDisponible').css('width', '100%');
+             $('#porcentajeUsado').text('0');
+             $('#porcentajeDisponible').text('100');
+         }
+
+        
+         if (capacidadUsada > capacidadMaxima && capacidadMaxima > 0) {
+             $('#estadoCapacidad').removeClass('badge-success badge-warning').addClass('badge-danger')
+                 .text('Capacidad Excedida');
+         } else if (capacidadMaxima > 0) {
+             if (capacidadUsada === capacidadMaxima) {
+                 $('#estadoCapacidad').removeClass('badge-danger badge-success').addClass('badge-warning')
+                     .text('Capacidad Completa');
+             } else {
+                 $('#estadoCapacidad').removeClass('badge-danger badge-warning').addClass('badge-success')
+                     .text('Capacidad dentro del límite');
+             }
+         } else {
+             $('#estadoCapacidad').removeClass('badge-success badge-danger badge-warning').addClass('badge-light border')
+                 .text('Defina la capacidad máxima');
+         }
+
+        
+         const botonAgregarSesion = $('.boton-agregar-sesion');
+         if (capacidadMaxima <= 0) {
+             botonAgregarSesion.prop('disabled', true)
+                 .attr('title', 'Primero debe definir la capacidad máxima del evento');
+         } else if (capacidadDisponible <= 0) {
+             botonAgregarSesion.prop('disabled', true)
+                 .attr('title', 'No hay capacidad disponible para nuevas sesiones');
+         } else {
+             botonAgregarSesion.prop('disabled', false)
+                 .attr('title', `Capacidad disponible: ${capacidadDisponible}`);
+         }
+     }
+
+     
+     function mostrarSesionesEnLista(sesiones) {
+         const contenedor = $('#listaSesionesGuardadas');
+         const mensajeVacio = $('#mensaje-sesiones-vacio');
+
+         contenedor.empty();
+
+         if (!sesiones || sesiones.length === 0) {
+             mensajeVacio.show();
+             actualizarCapacidadUsada([]);
+             return;
+         }
+
+         mensajeVacio.hide();
+         actualizarCapacidadUsada(sesiones);
+
+         sesiones.forEach(function (sesion) {
+             const cardSesion = `
+                         <div class="col-md-6 mb-3">
+                             <div class="card card-sesion h-100">
+                                 <div class="card-body">
+                                     <h6 class="card-title font-weight-bold text-primary">${sesion.Titulo}</h6>
+                                     <span class="badge badge-success">${sesion.Tipo}</span>
+                                     <span class="badge badge-info ml-1">Capacidad: ${sesion.Capacidad}</span>
+
+                                     <p class="card-text small text-muted mt-2">${sesion.Descripcion || 'Sin descripción'}</p>
+
+                                     <div class="sesion-info">
+                                         <small class="text-dark"><strong>Inicio:</strong> ${sesion.FechaInicio} ${sesion.HoraInicio}</small><br>
+                                         <small class="text-dark"><strong>Fin:</strong> ${sesion.FechaFin} ${sesion.HoraFin}</small><br>
+                                         <small class="text-dark"><strong>Lugar:</strong> ${sesion.Ubicacion}</small><br>
+                                         <small class="text-dark"><strong>Capacidad:</strong> ${sesion.Capacidad} personas</small><br>
+                                         <small class="text-dark"><strong>Moderador:</strong> ${sesion.CorreoModerador}</small>
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>
+                     `;
+
+             contenedor.append(cardSesion);
+         });
+     }
+
+     $(document).ready(function () {
+        
+         cargarSesionesGuardadas();
+
+        
+         $(document).on('click', '.boton-agregar-sesion', function () {
+            
+             const fechaInicioEvento = $('#eventFechaInicio').val();
+             const horaInicioEvento = $('#eventHoraInicio').val();
+             const fechaFinEvento = $('#eventFechaFin').val();
+             const horaFinEvento = $('#eventHoraFin').val();
+
+             console.log('Abriendo modal con fechas del evento:', {
+                 fechaInicio: fechaInicioEvento,
+                 horaInicio: horaInicioEvento,
+                 fechaFin: fechaFinEvento,
+                 horaFin: horaFinEvento
+             });
+
+             
+             $('#fechaInicio').val(fechaInicioEvento);
+             $('#horaInicio').val(horaInicioEvento);
+             $('#fechaFin').val(fechaFinEvento);
+             $('#horaFin').val(horaFinEvento);
+
+            
+             $('#nuevaSesionModal').modal('show');
+         });
+
+        
+         $('#CapacidadMaxima').on('input', function () {
+             
+             cargarSesionesGuardadas();
+
+            
+             const sesionesJson = $('#sesionesJsonTemp').val();
+             if (sesionesJson && sesionesJson !== '') {
+                 try {
+                     const sesiones = JSON.parse(sesionesJson);
+                     let capacidadUsada = 0;
+                     sesiones.forEach(sesion => {
+                         capacidadUsada += parseInt(sesion.Capacidad) || 0;
+                     });
+
+                     const capacidadMaxima = parseInt($(this).val()) || 0;
+                     if (capacidadUsada > capacidadMaxima) {
+                         $('#mensajeCapacidadGlobal').addClass('text-danger')
+                             .text(`ADVERTENCIA: Las sesiones existentes (${capacidadUsada}) exceden la nueva capacidad máxima (${capacidadMaxima})`);
+                     } else {
+                         $('#mensajeCapacidadGlobal').removeClass('text-danger');
+                         actualizarMensajeCapacidad();
+                     }
+                 } catch (e) {
+                     console.error('Error al verificar sesiones existentes:', e);
+                 }
+             }
+         });
+
+     });
+
+     
+     function verificarCapacidadDisponible(capacidadSesion) {
+         const capacidadMaxima = parseInt($('#CapacidadMaxima').val()) || 0;
+
+         if (capacidadMaxima <= 0) {
+             return { disponible: 0, error: 'Primero debe definir la capacidad máxima del evento' };
+         }
+
+         
+         const sesionesJson = $('#sesionesJsonTemp').val();
+         let capacidadUsada = 0;
+
+         if (sesionesJson && sesionesJson !== '') {
+             try {
+                 const sesiones = JSON.parse(sesionesJson);
+                 sesiones.forEach(sesion => {
+                     capacidadUsada += parseInt(sesion.Capacidad) || 0;
+                 });
+             } catch (e) {
+                 console.error('Error al parsear sesiones:', e);
+             }
+         }
+
+
+         const capacidadDisponible = capacidadMaxima - capacidadUsada;
+
+         if (capacidadSesion > capacidadDisponible) {
+             return {
+                 disponible: capacidadDisponible,
+                 error: `Capacidad insuficiente. Disponible: ${capacidadDisponible}, Solicitada: ${capacidadSesion}`
+             };
+         }
+
+         return { disponible: capacidadDisponible, error: null };
+     }
+
+    
+     function actualizarMensajeCapacidad() {
+         const capacidadMaxima = parseInt($('#CapacidadMaxima').val()) || 0;
+         const capacidadUsada = parseInt($('#capacidadUsada').text()) || 0;
+         const capacidadDisponible = capacidadMaxima - capacidadUsada;
+
+         let mensaje = '';
+         if (capacidadMaxima <= 0) {
+             mensaje = 'Primero defina la capacidad máxima del evento';
+         }
+
+         $('#mensajeCapacidadGlobal').text(mensaje);
+     }
+
+</script>

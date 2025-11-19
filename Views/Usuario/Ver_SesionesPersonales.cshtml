@@ -9,7 +9,7 @@
 }
 <!-- FullCalendar CSS -->
 
-<h3>Agenda Personal de Eventos</h3>
+<h3>Agenda Personal de Sesiones</h3>
 <a asp-action="Ver_Sesiones" class="btn btn-primary">Ver agenda de eventos disponibles</a>
 
 <!-- Contenedor del calendario -->
@@ -33,7 +33,7 @@
             timeZone: 'local',
             height: 'auto',
             eventDisplay: 'block', // 🔹 Hace visibles los colores de fondo
-            eventColor: '#007bff', // color por defecto si no hay uno en BD
+            eventColor: '#28a745', // color por defecto si no hay uno en BD
 
             headerToolbar: {
                 left: 'prev,next today',
@@ -53,11 +53,16 @@
 
             eventClick: function (info) {
                 info.jsEvent.preventDefault();
-                alert(
-                    '📅 Evento: ' + info.event.title +
-                    '\nInicio: ' + info.event.start.toLocaleString() +
-                    '\nFin: ' + (info.event.end ? info.event.end.toLocaleString() : 'Sin fecha de fin')
-                );
+
+                // Obtener el ID del evento (asumiendo que está en info.event.id)
+                var eventoId = info.event.id;
+
+                // Redirigir a la acción Ver_Mas con el ID
+                if (eventoId) {
+                    window.location.href = '/Usuario/Ver_Mas/' + eventoId;
+                } else {
+                    console.error('El evento no tiene ID');
+                }
             }
         });
 
@@ -67,11 +72,12 @@
 
 <style>
     #calendar {
-        max-width: 900px;
-        margin: 40px auto;
+        max-width: 100%;
+        margin: 20px auto;
         background: #fff;
         border-radius: 12px;
-        padding: 10px;
+        padding: 20px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
+
 </style>

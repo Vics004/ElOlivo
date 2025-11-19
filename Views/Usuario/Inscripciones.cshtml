@@ -113,10 +113,24 @@ else
                 <div class="evento-item">
                     <span class="evento-item-label">Acciones</span>
                     <div class="evento-acciones">
-                        <a asp-action="Ver_Mas" asp-route-id="@inscripcion.eventoid" class="btn btn-success btn-sm">
+                        <a asp-action="Ver_Mas2" asp-route-idEvento="@inscripcion.eventoid" class="btn btn-success btn-sm">
                             Ver más
                         </a>
-                        <button type="button" class="btn btn-primary">Comprobante</button>
+                        @if (inscripcion.EstadoId == 2)
+                        {
+                            <a asp-action="Comprobante" asp-route-id="@inscripcion.inscripcionid"
+                               class="btn btn-primary btn-sm btn-comprobante"
+                               data-inscripcion-id="@inscripcion.inscripcionid">
+                                Comprobante
+                            </a>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-secondary btn-sm" disabled
+                                    title="Solo disponible para inscripciones confirmadas">
+                                Comprobante
+                            </button>
+                        }
                         @if (inscripcion.EstadoId != 1)
                         {
                             <form asp-action="CancelarInscripcion" method="post" class="cancelar-form">
@@ -130,10 +144,71 @@ else
         }
     </div>
 }
+<!-- Modal para comprobante -->
+<div class="modal fade" id="comprobanteModal" tabindex="-1" aria-labelledby="comprobanteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="comprobanteModalContent">
+            <!-- El contenido se cargará aquí via AJAX -->
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        // Manejar clic en botones de comprobante
+        $(document).on('click', '.btn-comprobante', function (e) {
+            e.preventDefault(); // Esto evita que se abra en nueva página
+
+            var btn = $(this);
+            var url = btn.attr('href');
+            var inscripcionId = btn.data('inscripcion-id');
+
+            console.log('Cargando comprobante para inscripción:', inscripcionId);
+
+            // Mostrar loading en el modal
+            $('#comprobanteModalContent').html(`
+                        <div class="modal-header">
+                            <h5 class="modal-title">Cargando comprobante...</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="mt-2">Cargando comprobante...</p>
+                        </div>
+                    `);
+
+            // Mostrar el modal
+            var comprobanteModal = new bootstrap.Modal(document.getElementById('comprobanteModal'));
+            comprobanteModal.show();
+
+            // Cargar el contenido del comprobante via AJAX
+            $.get(url)
+                .done(function (data) {
+                    console.log('Comprobante cargado exitosamente');
+                    $('#comprobanteModalContent').html(data);
+                })
+                .fail(function (xhr, status, error) {
+                    console.error('Error al cargar comprobante:', error);
+                    $('#comprobanteModalContent').html(`
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title">Error</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Error al cargar el comprobante. Por favor, intente nuevamente.</p>
+                                    <p class="text-muted">Error: ${error}</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                </div>
+                            `);
+                });
+        });
+
+        // Script existente para cancelar inscripción (mantenerlo)
         document.querySelectorAll('.cancelar-form').forEach(form => {
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
@@ -154,9 +229,12 @@ else
             });
         });
     </script>
-
-
 }
+
+
+
+
+
 
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

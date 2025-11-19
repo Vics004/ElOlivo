@@ -1,104 +1,213 @@
 ﻿@* Views/AdminEventos/GestionUsuarios.cshtml *@
 <link rel="stylesheet" href="~/css/Tablas.css" />
 
+@* AJUSTES DE ESTILO ESPECÍFICOS PARA ESTA VISTA (7 COLUMNAS) *@
+<style>
+    .eventos-header, .evento-card {
+        grid-template-columns: 1.5fr 2fr 1fr 1fr 1fr 1.5fr 2.5fr !important;
+    }
+    .eventos-header .eventos-header-item:last-child {
+        justify-content: center !important;
+    }
+    .evento-acciones {
+        align-items: center !important; 
+    }
+
+    .evento-acciones .btn {
+        max-width: 150px; 
+        width: 100%;
+        margin: 2px 0; /* Espacio vertical entre ellos */
+    }
+    
+</style>
+
 @model IEnumerable<dynamic>
 
 @{
     Layout = "_Layout_Admin";
     ViewData["Title"] = "Gestión de Usuarios";
+    
+    // Obtener los valores de los filtros para mantenerlos en el formulario
+    var currentEventId = Context.Request.Query["eventId"];
+    var currentSearch = Context.Request.Query["search"];
+    var currentEstado = Context.Request.Query["estadoInscripcion"];
+    var currentAsistencia = Context.Request.Query["asistenciaApto"];
+    var currentFechaDesde = Context.Request.Query["fechaDesde"];
+    var currentFechaHasta = Context.Request.Query["fechaHasta"];
 }
 
-<h2 class="page-title">Gestión de Usuarios</h2>
+<h2 class="page-title">Gestión de Usuarios Inscritos</h2>
 
-<!-- Filtros -->
 <div class="filtros-card">
-    <form asp-action="GestionUsuarios" method="get" class="filtros-form">
+    <form asp-action="GestionUsuarios"
+          method="get" class="filtros-form">
+        
         <div class="filtros-grid">
-            <!-- Buscar por usuario -->
+
+            @if (!string.IsNullOrEmpty(currentEventId))
+            {
+                <input type="hidden" name="eventId" value="@currentEventId" />
+            }
+
             <div class="filtro-item">
-                <label class="filtro-label">Buscar usuario</label>
-                <input type="text" name="search" placeholder="Nombre del usuario..."
-                       value="@Context.Request.Query["search"]" class="busqueda-input" />
+                <label class="filtro-label">Buscar usuario/correo</label>
+                <input type="text" name="search" placeholder="Nombre o correo..."
+                       value="@currentSearch" class="busqueda-input" />
             </div>
 
-            <!-- Buscar por evento -->
             <div class="filtro-item">
-                <label class="filtro-label">Buscar evento</label>
-                <input type="text" name="eventoSearch" placeholder="Nombre del evento..."
-                       value="@Context.Request.Query["eventoSearch"]" class="busqueda-input" />
+                <label class="filtro-label">Estado Inscripción</label>
+                <select name="estadoInscripcion" class="busqueda-input">
+                    <option value="">Todos</option>
+                    @* IDs de estado: 2 = Confirmada, 1 = Cancelada *@
+                    <option value="2" selected="@(currentEstado == "2")">Confirmada (Activa)</option>
+                    <option value="1" selected="@(currentEstado == "1")">Cancelada</option>
+                </select>
             </div>
 
-            <!-- Botones -->
+            <div class="filtro-item">
+                <label class="filtro-label">Certificado (>=75%)</label>
+                <select name="asistenciaApto" class="busqueda-input">
+                    <option value="">Todos</option>
+                    <option value="Apto" selected="@(currentAsistencia == "Apto")">Apto (>=75%)</option>
+                    <option value="No Apto" selected="@(currentAsistencia == "No Apto")">No Apto (<75%)</option>
+                </select>
+            </div>
+
+            <div class="filtro-item">
+                <label class="filtro-label">F. Inscripción Desde</label>
+                <input type="date" name="fechaDesde"
+                       value="@currentFechaDesde" class="busqueda-input" />
+            </div>
+
+            <div class="filtro-item">
+                <label class="filtro-label">F. Inscripción Hasta</label>
+                <input type="date" name="fechaHasta"
+                       value="@currentFechaHasta" class="busqueda-input" />
+            </div>
+
             <div class="botones-filtro">
                 <button type="submit" class="btn btn-success">Buscar</button>
                 <button type="submit" class="btn btn-danger" name="limpiar" value="true">Limpiar</button>
+                <button type="button" class="btn btn-primary" id="btnEnviarCertificados">Enviar Certificados</button>
             </div>
         </div>
     </form>
 </div>
 
+<div class="export-options" style="margin-bottom: 15px;">
+    <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            Exportar Usuarios
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+            <li>
+                <a class="dropdown-item" 
+                   href="@Url.Action("ExportarExcelUsuarios", "Admin", new { 
+                       eventId = currentEventId, 
+                       search = currentSearch, 
+                       estadoInscripcion = currentEstado, 
+                       asistenciaApto = currentAsistencia, 
+                       fechaDesde = currentFechaDesde, 
+                       fechaHasta = currentFechaHasta
+                   })">
+                    Exportar en Excel
+                </a>
+            </li>
+            
+            <li>
+                <a class="dropdown-item" 
+                   href="@Url.Action("ExportarPDFUsuarios", "Admin", new { 
+                       eventId = currentEventId, 
+                       search = currentSearch, 
+                       estadoInscripcion = currentEstado, 
+                       asistenciaApto = currentAsistencia, 
+                       fechaDesde = currentFechaDesde, 
+                       fechaHasta = currentFechaHasta
+                   })">
+                    Exportar en PDF
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
 @if (Model == null || !Model.Any())
 {
-    <div class="alert alert-info">No hay usuarios inscritos en tus eventos.</div>
+    <div class="alert alert-info">No hay usuarios inscritos en este evento que cumplan con los filtros.</div>
 }
 else
 {
     <div class="eventos-container">
-        <!-- Encabezado -->
         <div class="eventos-header">
             <div class="eventos-header-item">Usuario</div>
             <div class="eventos-header-item">Correo</div>
             <div class="eventos-header-item">Teléfono</div>
-            <div class="eventos-header-item">Evento</div>
+            <div class="eventos-header-item">F. Inscripción</div> 
+            <div class="eventos-header-item">Estado</div> 
             <div class="eventos-header-item">Asistencia</div>
             <div class="eventos-header-item">Acciones</div>
         </div>
 
-        <!-- Tarjetas de Usuarios -->
         @foreach (var usuario in Model)
         {
             <div class="evento-card">
-                <!-- Nombre del Usuario -->
                 <div class="evento-item">
                     <span class="evento-item-label">Usuario</span>
                     <span class="evento-item-value evento-nombre">@usuario.NombreUsuario</span>
                 </div>
 
-                <!-- Correo -->
                 <div class="evento-item">
                     <span class="evento-item-label">Correo</span>
                     <span class="evento-item-value evento-descripcion">@usuario.Email</span>
                 </div>
 
-                <!-- Teléfono -->
                 <div class="evento-item">
                     <span class="evento-item-label">Teléfono</span>
                     <span class="evento-item-value">@usuario.Telefono</span>
                 </div>
-
-                <!-- Evento -->
+                
                 <div class="evento-item">
-                    <span class="evento-item-label">Evento</span>
-                    <span class="evento-item-value">@usuario.NombreEvento</span>
+                    <span class="evento-item-label">F. Inscripción</span>
+                    <span class="evento-item-value">@(usuario.FechaInscripcion?.ToString("dd/MM/yyyy") ?? "-")</span>
+                </div>
+                
+                <div class="evento-item">
+                    <span class="evento-item-label">Estado</span>
+                    <span class="estado-badge 
+                        @(usuario.EstadoNombreInscripcion == "Cancelado" ? "estado-cancelada" : "estado-confirmada")">
+                        @usuario.EstadoNombreInscripcion
+                    </span>
                 </div>
 
-                <!-- Asistencia -->
                 <div class="evento-item">
                     <span class="evento-item-label">Asistencia</span>
                     <span class="estado-badge
-                        @(usuario.PorcentajeAsistencia >= 80 ? "estado-confirmada" :
-                          usuario.PorcentajeAsistencia >= 50 ? "estado-proceso" :
-                          usuario.PorcentajeAsistencia > 0 ? "estado-pendiente" : "estado-cancelada")">
+                        @(usuario.PorcentajeAsistencia >= 75 ? "estado-confirmada" : "estado-cancelada")">
                         @usuario.PorcentajeAsistencia% (@usuario.AsistenciasRegistradas/@usuario.TotalSesiones)
                     </span>
                 </div>
 
-                <!-- Acciones -->
                 <div class="evento-item">
                     <span class="evento-item-label">Acciones</span>
                     <div class="evento-acciones">
-                        <button type="button" class="btn btn-success">Ver más</button>
-                        <button type="button" class="btn btn-danger">Cancelar Inscripción</button>
+                        <a asp-action="VerPerfilUsuario" asp-controller="Admin"
+                           asp-route-id="@usuario.UsuarioId" class="btn btn-success">
+                            Ver más
+                        </a>
+                        <button type="button" class="btn btn-primary">Comprobante</button>
+                        @if (usuario.EstadoNombreInscripcion != "Cancelada")
+                        {
+                            <form asp-action="CancelarInscripcion" asp-controller="Admin" method="post"
+                                  style="display:inline;" onsubmit="return confirm('¿Está seguro de que desea cancelar esta inscripción?');">
+
+                                <input type="hidden" name="inscripcionId" value="@usuario.InscripcionId" />
+
+                                <button type="submit" class="btn btn-danger">
+                                    Cancelar Inscripción
+                                </button>
+                            </form>
+                        }
                     </div>
                 </div>
             </div>
@@ -106,4 +215,60 @@ else
     </div>
 }
 
+@section Scripts {
+    <script>
+        document.getElementById('btnEnviarCertificados').addEventListener('click', function () {
+            if (!confirm('¿Está seguro de enviar certificados a los usuarios APTOS (>=75% asistencia) que cumplan con los filtros actuales?')) {
+                return;
+            }
 
+            // Obtener los parámetros de filtro actuales
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('eventId') || '@currentEventId';
+            const search = urlParams.get('search') || '';
+            const estadoInscripcion = urlParams.get('estadoInscripcion') || '';
+            const asistenciaApto = urlParams.get('asistenciaApto') || '';
+            const fechaDesde = urlParams.get('fechaDesde') || '';
+            const fechaHasta = urlParams.get('fechaHasta') || '';
+
+            // Mostrar indicador de carga
+            const btn = this;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Procesando...';
+
+            // Hacer la petición AJAX
+            fetch('@Url.Action("EnviarCertificados", "Admin")?' + new URLSearchParams({
+                eventId: eventId,
+                search: search,
+                estadoInscripcion: estadoInscripcion,
+                asistenciaApto: asistenciaApto,
+                fechaDesde: fechaDesde,
+                fechaHasta: fechaHasta
+            }), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+
+                    if (data.success) {
+                        alert(data.mensaje);
+                        // Opcional: recargar la página
+                        // location.reload();
+                    } else {
+                        alert('Error: ' + data.mensaje);
+                    }
+                })
+                .catch(error => {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                    alert('Error al procesar la solicitud: ' + error);
+                });
+        });
+    </script>
+}

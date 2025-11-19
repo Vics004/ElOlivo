@@ -1,0 +1,675 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    Layout = "_Layout_Admin";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planificación de Actividades</title>
+    <style>
+
+
+        .fondo-verde {
+            background-color: #5abf73;
+            width: calc(100% + 40px);
+            padding: 30px 20px;
+            margin-left: -20px;
+            margin-right: -20px;
+            margin-top: -45px;
+            margin-bottom: -45px;
+            min-height: calc(100vh - 60px);
+        }
+
+        .tarjeta-evento {
+            max-width: 650px;
+            width: 90%;
+            border-radius: 15px;
+            border: none;
+            margin: 0 auto;
+        }
+
+        .titulo-seccion {
+            color: #333;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 25px;
+        }
+
+        .insignia-fase {
+            background-color: #6c75fb;
+            padding: 8px 15px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-radius: 10px;
+            color: white;
+        }
+
+        .info-evento-header {
+            background-color: #6c75fb;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+        }
+
+        .info-evento-header h5 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .info-evento-header .fecha-evento {
+            font-size: 0.95rem;
+            opacity: 0.95;
+        }
+
+        .info-evento-header .fecha-evento i {
+            margin-right: 5px;
+        }
+
+        .seccion-sesiones {
+            margin-bottom: 25px;
+        }
+
+        .seccion-sesiones h6 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .sesiones-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .card-sesion {
+            background-color: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .card-sesion:hover {
+            border-color: #6c75fb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(108, 117, 251, 0.2);
+        }
+
+        .card-sesion.seleccionada {
+            border-color: #6c75fb;
+            background-color: #f0f1ff;
+            box-shadow: 0 4px 12px rgba(108, 117, 251, 0.3);
+        }
+
+        .card-sesion .numero-sesion {
+            background-color: #6c75fb;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 5px 12px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .card-sesion.seleccionada .numero-sesion {
+            background-color: #5560e9;
+        }
+
+        .card-sesion .titulo-card {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            line-height: 1.3;
+            min-height: 35px;
+        }
+
+        .card-sesion .fecha-card {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .card-sesion .fecha-card i {
+            font-size: 0.75rem;
+            margin-right: 3px;
+        }
+
+        .seccion-agenda {
+            margin-top: 25px;
+        }
+
+        .seccion-agenda label {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .dropdown-agenda {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            background-color: white;
+            font-size: 0.95rem;
+            color: #666;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+        }
+
+        .boton-nueva-agenda {
+            background-color: #6c75fb;
+            border-color: #6c75fb;
+            color: white;
+            font-weight: 500;
+            padding: 12px 20px;
+            border-radius: 8px;
+            width: 100%;
+            margin-top: 15px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .boton-nueva-agenda:hover {
+            background-color: #5560e9;
+            border-color: #5560e9;
+            color: white;
+        }
+
+        .boton-nueva-agenda i {
+            margin-right: 8px;
+        }
+
+        .seccion-actividades {
+            margin-top: 25px;
+        }
+
+        .seccion-actividades h6 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .boton-agregar-actividad {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #333;
+            font-weight: 500;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            float: right;
+            transition: all 0.3s ease;
+        }
+
+        .boton-agregar-actividad:hover {
+            background-color: #e0a800;
+            border-color: #e0a800;
+            color: #333;
+        }
+
+        .mensaje-vacio {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .mensaje-vacio p {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .mensaje-vacio small {
+            font-size: 0.85rem;
+        }
+
+        .boton-publicar {
+            background-color: #5abf73;
+            border-color: #5abf73;
+            color: white;
+            font-weight: 600;
+            padding: 12px 30px;
+            border-radius: 8px;
+            width: 100%;
+            margin-top: 30px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .boton-publicar:hover {
+            background-color: #4aa862;
+            border-color: #4aa862;
+            color: white;
+        }
+
+        .actividades-lista {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            background-color: white;
+            min-height: 100px;
+        }
+
+        .contenido-agenda {
+            display: none;
+        }
+
+        .contenido-agenda.activo {
+            display: block;
+        }
+
+        .btn.disabled, .btn:disabled {
+            opacity: 0.65; 
+            cursor: not-allowed; 
+            pointer-events: none; 
+        }
+
+
+       
+        .seccion-actividades,
+        .seccion-sesiones,
+        .seccion-agenda,
+        .contenido-agenda {
+            margin-bottom: 35px; 
+        }
+
+           
+            .seccion-actividades h6,
+            .seccion-sesiones h6,
+            .seccion-agenda label {
+                margin-bottom: 18px; 
+            }
+
+       
+        .form-control,
+        .dropdown-agenda {
+            margin-bottom: 20px; 
+        }
+
+        
+        .boton-nueva-agenda {
+            margin-top: 20px; 
+        }
+
+        .boton-publicar {
+            margin-top: 45px; 
+        }
+
+      
+        .sesiones-container {
+            gap: 18px; 
+            margin-bottom: 30px; 
+        }
+
+        
+        .tarjeta-evento .card-body {
+            padding: 60px 55px; 
+        }
+
+    </style>
+</head>
+<body>
+    <div class="fondo-verde">
+        <div class="card tarjeta-evento shadow-lg">
+            <div class="card-body p-5">
+                <h3 class="text-center mb-4 titulo-seccion">Planificación de actividades</h3>
+                <div class="d-flex justify-content-end mb-4">
+                    <span class="insignia-fase">Fase 2 de 2</span>
+                </div>
+
+              
+                <div class="info-evento-header">
+                    <h5>@ViewBag.NombreEvento</h5>
+                    <div class="fecha-evento">
+                        <i class="far fa-calendar-alt"></i>
+                        @ViewBag.FechasEvento
+                    </div>
+                </div>
+
+            
+                <div class="seccion-actividades">
+                    <div class="clearfix mb-3">
+                        <h6 class="float-left">Tipos de actividades</h6>
+                        <button class="btn boton-agregar-actividad" data-toggle="modal" data-target="#modalTipoActividad">
+                            Agregar tipo de actividad
+                        </button>
+                    </div>
+                    <select id="comboTiposActividad" class="form-control mb-3">
+                        <option value="">No hay tipos de actividades agregados aún</option>
+                    </select>
+                </div>
+
+            
+                <div class="seccion-sesiones">
+                    <h6>Elige la sesión a agendar</h6>
+                    <div class="sesiones-container">
+                        @{
+                            var i = 1;
+                        }
+                        @foreach (var sesion in ViewBag.Sesiones)
+                        {
+                            var fechaStr = sesion.fecha_inicio.ToString("dd/MM/yyyy");
+                            var horaStr = sesion.fecha_inicio.ToString("hh:mm tt", new System.Globalization.CultureInfo("es-ES"));
+
+                          
+                            var fechaInicioISO = sesion.fecha_inicio.ToString("yyyy-MM-dd HH:mm:ss");
+                            var fechaFinISO = sesion.fecha_fin.ToString("yyyy-MM-dd HH:mm:ss");
+
+                            <div class="card-sesion @(i == 1 ? "seleccionada" : "")"
+                                 data-sesion="@sesion.sesionid"
+                                 data-fecha-inicio="@fechaInicioISO"
+                                 data-fecha-fin="@fechaFinISO">
+                                <div class="numero-sesion">Sesión @i</div>
+                                <div class="titulo-card">@sesion.titulo</div>
+                                <div class="fecha-card">
+                                    <i class="far fa-calendar-alt"></i> @fechaStr, @horaStr
+                                </div>
+                            </div>
+                            i++;
+                        }
+                    </div>
+                </div>
+
+            
+                <div class="contenido-agenda activo">
+                    <div class="seccion-agenda">
+                        <label>Agendas Asociadas a la sesión</label>
+                        <select class="dropdown-agenda" id="selectAgendasSesion">
+                            <option selected>Se mostrarán las agendas existentes</option>
+                        </select>
+                        <button class="btn boton-nueva-agenda" id="btnNuevaAgenda" disabled>
+                            <i class="fas fa-plus"></i> Nueva Agenda
+                        </button>
+                    </div>
+                </div>
+
+              
+                <button class="btn boton-publicar" id="btnPublicarEvento">Publicar evento</button>
+            </div>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_TipoActividadModal")
+    @await Html.PartialAsync("_NuevaAgendaModal")
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+     
+        window.AppState = {
+            sesionSeleccionada: null,
+            sesionHoraInicio: null,
+            sesionHoraFin: null,
+            ponenteValidado: false,
+            ponenteId: null
+        };
+
+        $(document).ready(function () {
+           
+            inicializarSesionInicial();
+            cargarTiposActividadTemp();
+
+           
+            $(document).on('click', '.card-sesion', function () {
+                console.log('📍 Click en sesión detectado');
+
+               
+                $('.card-sesion').removeClass('seleccionada');
+                $(this).addClass('seleccionada');
+
+             
+                const sesionId = $(this).data('sesion');
+                const fechaInicio = $(this).data('fecha-inicio');
+                const fechaFin = $(this).data('fecha-fin');
+
+                console.log('📊 Datos de sesión:', {
+                    sesionId: sesionId,
+                    fechaInicio: fechaInicio,
+                    fechaFin: fechaFin,
+                    tipo: typeof sesionId
+                });
+
+              
+                window.AppState.sesionSeleccionada = sesionId;
+
+              
+                if (fechaInicio && fechaFin) {
+                    window.AppState.sesionHoraInicio = fechaInicio.split(' ')[1].substring(0, 5);
+                    window.AppState.sesionHoraFin = fechaFin.split(' ')[1].substring(0, 5);
+                    console.log('⏰ Horarios extraídos:', window.AppState.sesionHoraInicio, '-', window.AppState.sesionHoraFin);
+                }
+
+               
+                habilitarBotonNuevaAgenda(true);
+
+                
+                cargarAgendasPorSesion(sesionId);
+            });
+
+         
+
+            function inicializarSesionInicial() {
+                const $sesionInicial = $('.card-sesion.seleccionada');
+                if ($sesionInicial.length > 0) {
+                    const sesionId = $sesionInicial.data('sesion');
+                    const fechaInicio = $sesionInicial.data('fecha-inicio');
+                    const fechaFin = $sesionInicial.data('fecha-fin');
+
+                    window.AppState.sesionSeleccionada = sesionId;
+
+                    if (fechaInicio && fechaFin) {
+                        window.AppState.sesionHoraInicio = fechaInicio.split(' ')[1].substring(0, 5);
+                        window.AppState.sesionHoraFin = fechaFin.split(' ')[1].substring(0, 5);
+                    }
+
+                    
+                    habilitarBotonNuevaAgenda(true);
+                    cargarAgendasPorSesion(sesionId);
+                } else {
+                    
+                    habilitarBotonNuevaAgenda(false);
+                }
+            }
+
+            function habilitarBotonNuevaAgenda(habilitar) {
+                const $btn = $('#btnNuevaAgenda');
+                if (habilitar) {
+                    $btn.prop('disabled', false).removeClass('disabled');
+                    
+                } else {
+                    $btn.prop('disabled', true).addClass('disabled');
+                    
+                }
+            }
+
+            function cargarAgendasPorSesion(sesionId) {
+               
+
+                $.ajax({
+                    url: '/Admin/ObtenerAgendasPorSesion',
+                    type: 'GET',
+                    data: { sesionId: sesionId },
+                    success: function (response) {
+                     
+                        actualizarAgendasDropdown(response.agendas || []);
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('❌ Error al cargar agendas:', error);
+                        actualizarAgendasDropdown([]);
+                    }
+                });
+            }
+
+            function actualizarAgendasDropdown(agendas) {
+                const $dropdown = $('#selectAgendasSesion');
+                $dropdown.empty();
+
+                if (agendas && agendas.length > 0) {
+                    $dropdown.append('<option value="" selected disabled>Consultar agendas de la sesión seleccionada</option>');
+                    agendas.forEach(function (agenda) {
+                        const horaInicio = agenda.hora_inicio ? new Date(agenda.hora_inicio).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+                        const horaFin = agenda.hora_fin ? new Date(agenda.hora_fin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+
+                        $dropdown.append(
+                            `<option value="${agenda.agendaid}">${agenda.nombre} (${horaInicio} - ${horaFin})</option>`
+                        );
+                    });
+                } else {
+                    $dropdown.append('<option value="" selected disabled>No hay agendas asociadas</option>');
+                }
+            }
+
+           
+
+            async function cargarTiposActividadTemp() {
+                try {
+                    const response = await fetch("/Admin/ObtenerTiposActividadTemp");
+                    const tipos = await response.json();
+
+                    const comboPrincipal = document.getElementById("comboTiposActividad");
+                    comboPrincipal.innerHTML = '';
+
+                    if (tipos.length === 0) {
+                        comboPrincipal.innerHTML = '<option value="">No hay tipos de actividades agregados aún</option>';
+                        return;
+                    }
+
+                    tipos.forEach(tipo => {
+                        const nombre = tipo.nombre || tipo.Nombre || "";
+                        const id = tipo.IdTemp || tipo.id || tipo.tipoactividadoid;
+                        comboPrincipal.innerHTML += `<option value="${id}">${nombre}</option>`;
+                    });
+                } catch (error) {
+                    console.error('Error al cargar tipos de actividad:', error);
+                }
+            }
+
+           
+            const btnGuardar = document.getElementById("btnGuardarTipoActividad");
+            if (btnGuardar) {
+                btnGuardar.replaceWith(btnGuardar.cloneNode(true));
+                document.getElementById("btnGuardarTipoActividad").addEventListener("click", async () => {
+                    const nombre = document.getElementById("nombreTipoActividad").value.trim();
+                    const descripcion = document.getElementById("descripcionTipoActividad").value.trim();
+
+                    if (!nombre) {
+                        alert("El nombre es obligatorio");
+                        return;
+                    }
+
+                    const response = await fetch("/Admin/GuardarTipoActividadTemp", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ nombre, descripcion })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert(`✅ Tipo de actividad agregado (total: ${data.total})`);
+                        await cargarTiposActividadTemp();
+                        $('#modalTipoActividad').modal('hide');
+                        document.getElementById("formTipoActividad").reset();
+                    } else {
+                        alert("❌ " + data.mensaje);
+                    }
+                });
+            }
+
+        
+            $('#btnNuevaAgenda').on('click', function () {
+               
+
+                const sesionId = window.obtenerSesionSeleccionada();
+                const horario = window.obtenerHorarioSesion();
+
+                console.log('📋 Estado al intentar abrir modal:', {
+                    sesionId: sesionId,
+                    horario: horario
+                });
+
+                if (!sesionId) {
+                    alert('Por favor seleccione una sesión primero');
+                    return false;
+                }
+
+               
+                $('#sesionIdAgenda').val(sesionId);
+
+               
+                window.modalState = {
+                    sesionId: sesionId,
+                    horaInicio: horario.horaInicio,
+                    horaFin: horario.horaFin
+                };
+
+          
+                $('#nuevaAgendaModal').modal('show');
+            });
+        });
+
+ 
+        $('#btnPublicarEvento').on('click', function () {
+            console.log('📡 Click en Publicar evento detectado. Enviando a backend...');
+
+           
+            const $btn = $(this);
+            $btn.prop('disabled', true).text('Publicando...');
+
+            $.ajax({
+                url: '/Admin/PublicarEventoCompleto', 
+                type: 'POST',
+                contentType: 'application/json', 
+                success: function (response) {
+                    if (response.success) {
+                        alert(`🎉 ${response.mensaje}`);
+                       
+                        window.location.href = '/Admin/GestionEventos';
+                    } else {
+                        alert(`❌ Error al publicar: ${response.mensaje}`);
+                        console.error('❌ Error de lógica en servidor:', response);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    alert('❌ Ocurrió un error de conexión al intentar publicar.');
+                    console.error('❌ Error de AJAX:', status, error);
+                },
+                complete: function () {
+                  
+                    $btn.prop('disabled', false).text('Publicar evento');
+                }
+            });
+        });
+
+        
+        window.obtenerSesionSeleccionada = function () {
+            return window.AppState.sesionSeleccionada;
+        };
+
+        window.obtenerHorarioSesion = function () {
+            return {
+                horaInicio: window.AppState.sesionHoraInicio,
+                horaFin: window.AppState.sesionHoraFin
+            };
+        };
+
+
+      
+    </script>
+</body>
+</html>

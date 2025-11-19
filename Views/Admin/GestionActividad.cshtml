@@ -1,0 +1,864 @@
+﻿@{
+    Layout = "_Layout_Admin";
+    ViewData["Title"] = "Gestión de Actividad";
+    var actividad = ViewBag.Actividad;
+    var materiales = ViewBag.Materiales;
+    var Estado = actividad.Estado ? "Disponible" : "Cancelado";
+
+    // Manejo seguro de fechas
+    var horaInicio = actividad.Inicio?.ToString("h:mm tt", new System.Globalization.CultureInfo("es-ES")) ?? "No definida";
+    var horaFin = actividad.Fin?.ToString("h:mm tt", new System.Globalization.CultureInfo("es-ES")) ?? "No definida";
+
+    // Pre-procesar materiales para evitar Lambdas en Razor
+    var materialesLinks = new List<dynamic>();
+    var materialesArchivos = new List<dynamic>();
+
+    if (materiales != null)
+    {
+        foreach (var material in materiales)
+        {
+            if (material.EsLink != null && (bool)material.EsLink)
+            {
+                materialesLinks.Add(material);
+            }
+            else
+            {
+                materialesArchivos.Add(material);
+            }
+        }
+    }
+
+    bool hayLinks = materialesLinks.Count > 0;
+    bool hayArchivos = materialesArchivos.Count > 0;
+}
+
+@functions {
+    public string GetFileIcon(string tipoNombre)
+    {
+        if (string.IsNullOrEmpty(tipoNombre))
+            return "alt";
+
+        return tipoNombre.ToLower() switch
+        {
+            "pdf" => "pdf",
+            "word" => "word",
+            "powerpoint" => "powerpoint",
+            "excel" => "excel",
+            "comprimido" => "archive",
+            _ => "alt"
+        };
+    }
+}
+
+<style>
+    /* Mantén todo el CSS igual que en la versión anterior */
+    .evento-container {
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        max-width: 1200px;
+        margin: 1.5rem auto;
+    }
+
+    .evento-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .evento-titulo {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0;
+    }
+
+    .evento-estado {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .badge-estado {
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .badge-confirmada {
+        background-color: #6366f1;
+    }
+
+    .badge-cancelada {
+        background-color: #dc3545;
+    }
+
+    .fecha-badge {
+        background-color: #28a745;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .modo-edicion {
+        background-color: #fff4e6;
+        border-left: 4px solid #f59e0b;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border-radius: 6px;
+        display: none;
+    }
+
+    .botones-edicion {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+        margin-top: 0.5rem;
+    }
+
+    .contenido-principal {
+        margin-bottom: 2rem;
+    }
+
+    .seccion-actividad {
+        margin-bottom: 2rem;
+    }
+
+    .seccion-titulo {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .titulo-seccion {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 0;
+    }
+
+    .info-actividad {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .campo-actividad {
+        margin-bottom: 1rem;
+    }
+
+        .campo-actividad:last-child {
+            margin-bottom: 0;
+        }
+
+    .campo-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.25rem;
+        display: block;
+    }
+
+    .campo-valor {
+        color: #6b7280;
+    }
+
+    .lista-materiales {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .material-item {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background-color 0.2s ease;
+    }
+
+        .material-item:hover {
+            background-color: #e9ecef;
+        }
+
+    .material-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .material-nombre {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 0.25rem;
+        word-break: break-word;
+    }
+
+    .material-detalles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .material-fecha {
+        color: #6b7280;
+        font-size: 0.875rem;
+    }
+
+    .material-url {
+        color: #2563eb;
+        text-decoration: none;
+        font-size: 0.875rem;
+        word-break: break-all;
+    }
+
+        .material-url:hover {
+            text-decoration: underline;
+        }
+
+    .material-acciones {
+        display: flex;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    .btn {
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8125rem;
+    }
+
+    .btn-primary {
+        background-color: #6c75fb;
+        color: white;
+    }
+
+        .btn-primary:hover {
+            background-color: #5560e9;
+        }
+
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+    .btn-info {
+        background-color: #17a2b8;
+        color: white;
+    }
+
+        .btn-info:hover {
+            background-color: #138496;
+        }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+    .editable-field {
+        border: 1px solid #e5e7eb;
+        padding: 0.75rem;
+        border-radius: 6px;
+        background-color: #f9fafb;
+        width: 100%;
+        font-family: inherit;
+    }
+
+        .editable-field:focus {
+            outline: none;
+            border-color: #6c75fb;
+            background-color: white;
+            box-shadow: 0 0 0 3px rgba(108, 117, 251, 0.1);
+        }
+
+    .campo-editable {
+        margin-bottom: 1rem;
+    }
+
+    .estado-vacio {
+        text-align: center;
+        padding: 2rem;
+        color: #6b7280;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border: 2px dashed #dee2e6;
+    }
+
+    @@media (max-width: 768px) {
+        .evento-container {
+            padding: 1rem;
+            margin: 1rem;
+        }
+
+        .evento-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .evento-estado {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .seccion-titulo {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .material-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .material-acciones {
+            width: 100%;
+            justify-content: flex-end;
+        }
+
+        .botones-edicion {
+            justify-content: stretch;
+        }
+
+            .botones-edicion .btn {
+                flex: 1;
+            }
+    }
+</style>
+
+<div class="evento-container">
+    <!-- Header -->
+    <div class="evento-header">
+        <h1 class="evento-titulo">Gestión de Actividad</h1>
+        <div class="evento-estado">
+            <span class="badge-estado @(actividad.Estado ? "badge-confirmada" : "badge-cancelada")">@Estado</span>
+            <span class="fecha-badge">@horaInicio - @horaFin</span>
+        </div>
+    </div>
+
+    <!-- Modo de edición -->
+    <div id="modoEdicion" class="modo-edicion">
+        <div>
+            <i class="fas fa-edit"></i> <strong>Modo Edición:</strong> Puede editar el nombre y la descripción de la actividad.
+        </div>
+        <div class="botones-edicion">
+            <button id="btnCancelarEdicion" class="btn btn-secondary btn-sm">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button id="btnGuardarEdicion" class="btn btn-success btn-sm">
+                <i class="fas fa-save"></i> Guardar Cambios
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="contenido-principal">
+        <!-- Información de la actividad -->
+        <div class="seccion-actividad">
+            <div class="campo-editable">
+                <label class="campo-label">Nombre de la actividad</label>
+                <div id="nombreMostrar">@actividad.Nombre</div>
+                <input type="text" id="nombreEditar" class="editable-field" value="@actividad.Nombre" style="display: none;">
+            </div>
+
+            <div class="campo-editable">
+                <label class="campo-label">Descripción</label>
+                <div id="descripcionMostrar">@actividad.Descripcion</div>
+                <textarea id="descripcionEditar" class="editable-field" rows="4" style="display: none; resize: vertical;">@actividad.Descripcion</textarea>
+            </div>
+
+            <div class="info-actividad">
+                <div class="campo-actividad">
+                    <span class="campo-label">Ponente:</span>
+                    <span class="campo-valor">@actividad.Ponente</span>
+                </div>
+                <div class="campo-actividad">
+                    <span class="campo-label">Tipo de actividad:</span>
+                    <span class="campo-valor">@actividad.Actividad</span>
+                </div>
+            </div>
+
+            <button id="btnEditarNombre" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Editar Actividad
+            </button>
+        </div>
+
+        <!-- Links -->
+        <div class="seccion-actividad">
+            <div class="seccion-titulo">
+                <h3 class="titulo-seccion">
+                    <i class="fas fa-link"></i> Enlaces
+                </h3>
+                <button id="btnAgregarLink" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Agregar Link
+                </button>
+            </div>
+
+            <div id="listaLinks" class="lista-materiales">
+                @if (hayLinks)
+                {
+                    foreach (var material in materialesLinks)
+                    {
+                        <div class="material-item" data-materialid="@material.materialid">
+                            <div class="material-info">
+                                <div class="material-nombre">@material.nombre</div>
+                                <div class="material-detalles">
+                                    <span class="material-fecha">
+                                        Agregado: @material.fecha_subida?.ToString("dd/MM/yyyy HH:mm")
+                                    </span>
+                                    <a href="@material.url_archivo" target="_blank" class="material-url">
+                                        @material.url_archivo
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="material-acciones">
+                                <a href="@material.url_archivo" target="_blank" class="btn btn-info btn-sm">
+                                    <i class="fas fa-external-link-alt"></i> Abrir
+                                </a>
+                                <button class="btn btn-danger btn-sm btn-eliminar" onclick="eliminarMaterial(@material.materialid)">
+                                    <i class="fas fa-trash"></i> Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="estado-vacio">
+                        <i class="fas fa-link fa-2x mb-2"></i>
+                        <p>No hay enlaces agregados</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Archivos adjuntos -->
+        <div class="seccion-actividad">
+            <div class="seccion-titulo">
+                <h3 class="titulo-seccion">
+                    <i class="fas fa-file"></i> Archivos adjuntos
+                </h3>
+                <button id="btnAgregarArchivo" class="btn btn-success">
+                    <i class="fas fa-upload"></i> Subir Archivo
+                </button>
+            </div>
+
+            <div id="listaArchivos" class="lista-materiales">
+                @if (hayArchivos)
+                {
+                    foreach (var material in materialesArchivos)
+                    {
+                        <div class="material-item" data-materialid="@material.materialid">
+                            <div class="material-info">
+                                <div class="material-nombre">
+                                    <i class="fas fa-file-@GetFileIcon(material.TipoNombre)"></i> @material.nombre
+                                </div>
+                                <div class="material-detalles">
+                                    <span class="material-fecha">
+                                        Subido: @material.fecha_subida?.ToString("dd/MM/yyyy HH:mm")
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="material-acciones">
+                                <a href="@material.url_archivo" target="_blank" class="btn btn-info btn-sm" download>
+                                    <i class="fas fa-download"></i> Descargar
+                                </a>
+                                <button class="btn btn-danger btn-sm btn-eliminar" onclick="eliminarMaterial(@material.materialid)">
+                                    <i class="fas fa-trash"></i> Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="estado-vacio">
+                        <i class="fas fa-file fa-2x mb-2"></i>
+                        <p>No hay archivos adjuntos</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón Volver -->
+    <div style="text-align: center; margin-top: 2rem;">
+        <button onclick="history.back()" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </button>
+    </div>
+</div>
+
+<!-- Modal Agregar Link -->
+<div class="modal fade" id="modalAgregarLink" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Nuevo Link</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nombre del Link</label>
+                    <input type="text" id="inputNombreLink" class="form-control" placeholder="Ej: Material complementario">
+                </div>
+                <div class="form-group">
+                    <label>URL</label>
+                    <input type="url" id="inputUrlLink" class="form-control" placeholder="https://ejemplo.com">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarLink()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Subir Archivo -->
+<div class="modal fade" id="modalSubirArchivo" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Subir Archivo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Seleccionar Archivo</label>
+                    <input type="file" id="inputArchivo" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar">
+                    <small class="form-text text-muted">
+                        Formatos permitidos: PDF, Word, PowerPoint, Excel, ZIP, RAR (máx. 10MB)
+                    </small>
+                </div>
+                <div id="progressBar" class="progress" style="display: none;">
+                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="subirArchivo()">Subir</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const agendaId = @actividad.AgendaId;
+        let modoEdicion = false;
+
+        // Inicialización de modales
+        $(document).ready(function () {
+            // Limpiar modal de link al cerrar
+            $('#modalAgregarLink').on('hidden.bs.modal', function () {
+                document.getElementById('inputNombreLink').value = '';
+                document.getElementById('inputUrlLink').value = '';
+            });
+
+            // Limpiar modal de archivo al cerrar
+            $('#modalSubirArchivo').on('hidden.bs.modal', function () {
+                document.getElementById('inputArchivo').value = '';
+                document.getElementById('progressBar').style.display = 'none';
+            });
+        });
+
+        // Edición
+        document.getElementById('btnEditarNombre').addEventListener('click', function () {
+            if (!modoEdicion) {
+                document.getElementById('nombreMostrar').style.display = 'none';
+                document.getElementById('nombreEditar').style.display = 'block';
+                document.getElementById('descripcionMostrar').style.display = 'none';
+                document.getElementById('descripcionEditar').style.display = 'block';
+                document.getElementById('modoEdicion').style.display = 'block';
+                this.style.display = 'none';
+                modoEdicion = true;
+            }
+        });
+
+        document.getElementById('btnCancelarEdicion').addEventListener('click', function () {
+            document.getElementById('nombreMostrar').style.display = 'inline';
+            document.getElementById('nombreEditar').style.display = 'none';
+            document.getElementById('descripcionMostrar').style.display = 'block';
+            document.getElementById('descripcionEditar').style.display = 'none';
+            document.getElementById('modoEdicion').style.display = 'none';
+            document.getElementById('btnEditarNombre').style.display = 'inline';
+
+            // Restaurar valores originales
+            document.getElementById('nombreEditar').value = document.getElementById('nombreMostrar').textContent;
+            document.getElementById('descripcionEditar').value = document.getElementById('descripcionMostrar').textContent;
+
+            modoEdicion = false;
+        });
+
+        document.getElementById('btnGuardarEdicion').addEventListener('click', async function () {
+            const nombre = document.getElementById('nombreEditar').value;
+            const descripcion = document.getElementById('descripcionEditar').value;
+
+            if (!nombre.trim()) {
+                alert('El nombre no puede estar vacío');
+                return;
+            }
+
+            try {
+                const response = await fetch('/Admin/EditarActividad', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `agendaid=${agendaId}&nombre=${encodeURIComponent(nombre)}&descripcion=${encodeURIComponent(descripcion)}`
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('nombreMostrar').textContent = nombre;
+                    document.getElementById('descripcionMostrar').textContent = descripcion;
+                    document.getElementById('btnCancelarEdicion').click();
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: 'Actividad actualizada correctamente',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.mensaje
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error al guardar: ' + error
+                });
+            }
+        });
+
+        // Links
+        document.getElementById('btnAgregarLink').addEventListener('click', function () {
+            $('#modalAgregarLink').modal('show');
+        });
+
+        async function guardarLink() {
+            const nombre = document.getElementById('inputNombreLink').value;
+            const url = document.getElementById('inputUrlLink').value;
+
+            if (!nombre.trim() || !url.trim()) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campos incompletos',
+                    text: 'Complete todos los campos'
+                });
+                return;
+            }
+
+            // Validar URL
+            if (!isValidUrl(url)) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'URL inválida',
+                    text: 'Ingrese una URL válida (debe comenzar con http:// o https://)'
+                });
+                return;
+            }
+
+            try {
+                const response = await fetch('/Admin/AgregarLink', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `agendaid=${agendaId}&nombre=${encodeURIComponent(nombre)}&url=${encodeURIComponent(url)}`
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    $('#modalAgregarLink').modal('hide');
+                    location.reload();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.mensaje
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error al guardar el link: ' + error
+                });
+            }
+        }
+
+        // Archivos
+        document.getElementById('btnAgregarArchivo').addEventListener('click', function () {
+            $('#modalSubirArchivo').modal('show');
+        });
+
+        async function subirArchivo() {
+            const input = document.getElementById('inputArchivo');
+            const archivo = input.files[0];
+
+            if (!archivo) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Archivo requerido',
+                    text: 'Seleccione un archivo'
+                });
+                return;
+            }
+
+            // Validar tamaño (10MB)
+            if (archivo.size > 10 * 1024 * 1024) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Archivo muy grande',
+                    text: 'El archivo no puede ser mayor a 10MB'
+                });
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('agendaid', agendaId);
+            formData.append('archivo', archivo);
+
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.display = 'block';
+
+            try {
+                const response = await fetch('/Admin/SubirArchivo', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    $('#modalSubirArchivo').modal('hide');
+                    location.reload();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.mensaje
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error al subir el archivo: ' + error
+                });
+            } finally {
+                progressBar.style.display = 'none';
+            }
+        }
+
+        // Función para eliminar material - MANTENIENDO LA LÓGICA ANTIGUA
+        async function eliminarMaterial(materialid) {
+            if (!confirm('¿Está seguro de eliminar este material?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/Admin/EliminarMaterial', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `materialid=${materialid}`
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.querySelector(`[data-materialid="${materialid}"]`).remove();
+
+                    // Verificar si quedan elementos y mostrar estado vacío si es necesario
+                    const listaLinks = document.getElementById('listaLinks');
+                    const listaArchivos = document.getElementById('listaArchivos');
+
+                    if (listaLinks && listaLinks.children.length === 0) {
+                        listaLinks.innerHTML = `
+                                    <div class="estado-vacio">
+                                        <i class="fas fa-link fa-2x mb-2"></i>
+                                        <p>No hay enlaces agregados</p>
+                                    </div>
+                                `;
+                    }
+
+                    if (listaArchivos && listaArchivos.children.length === 0) {
+                        listaArchivos.innerHTML = `
+                                    <div class="estado-vacio">
+                                        <i class="fas fa-file fa-2x mb-2"></i>
+                                        <p>No hay archivos adjuntos</p>
+                                    </div>
+                                `;
+                    }
+
+                    alert('Material eliminado correctamente');
+                } else {
+                    alert('Error: ' + data.mensaje);
+                }
+            } catch (error) {
+                alert('Error: ' + error);
+            }
+        }
+
+        // Función auxiliar para validar URLs
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+    </script>
+}

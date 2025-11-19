@@ -1,5 +1,7 @@
 ﻿@* Views/AdminEventos/GestionInscripciones.cshtml *@
 <link rel="stylesheet" href="~/css/Tablas.css" />
+<!-- Agregar Font Awesome para el icono del candado -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 @model IEnumerable<dynamic>
 
@@ -76,23 +78,76 @@ else
                 </div>
 
                 <!-- Estado -->
-                <div class="evento-item">
+                <div class="evento-item estado-columna">
                     <span class="evento-item-label">Estado</span>
-                    <span class="estado-badge
-                        @(evento.EstadoId == 3 ? "estado-abierto" :
-                          evento.EstadoId == 4 ? "estado-finalizado" :
-                          evento.EstadoId == 5 ? "estado-cancelado" : "estado-cerrado")">
-                        @evento.EstadoNombre
-                    </span>
+                    <div class="estado-container">
+                        <span class="estado-badge
+@(evento.EstadoId == 3 ? "estado-abierto" :
+  evento.EstadoId == 4 ? "estado-finalizado" :
+  evento.EstadoId == 5 ? "estado-cancelado" : "estado-cerrado")">
+                            @evento.EstadoNombre
+                        </span>
+
+                        <!-- Icono para cambiar estado - SOLO si no está Cancelado o Finalizado -->
+                        @if (evento.EstadoId != 4 && evento.EstadoId != 5)
+                        {
+                            <div class="dropdown-estado">
+                                <button class="btn btn-sm btn-outline-secondary estado-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
+                                        title="Cambiar estado del evento">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item cambiar-estado"
+                                           data-eventoid="@evento.eventoid"
+                                           data-estadoid="3"
+                                           data-estadonombre="Abierto">
+                                            <span class="estado-indicador estado-abierto"></span>
+                                            Abierto
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item cambiar-estado"
+                                           data-eventoid="@evento.eventoid"
+                                           data-estadoid="6"
+                                           data-estadonombre="Inscripción Cerrada">
+                                            <span class="estado-indicador estado-cerrado"></span>
+                                            Inscripción Cerrada
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item cambiar-estado"
+                                           data-eventoid="@evento.eventoid"
+                                           data-estadoid="4"
+                                           data-estadonombre="Finalizado">
+                                            <span class="estado-indicador estado-finalizado"></span>
+                                            Finalizado
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item cambiar-estado"
+                                           data-eventoid="@evento.eventoid"
+                                           data-estadoid="5"
+                                           data-estadonombre="Cancelado">
+                                            <span class="estado-indicador estado-cancelado"></span>
+                                            Cancelado
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        }
+                    </div>
                 </div>
 
                 <!-- Acciones -->
                 <div class="evento-item">
                     <span class="evento-item-label">Acciones</span>
                     <div class="evento-acciones">
-                        <button type="button" class="btn btn-success">Ver inscripciones</button>
-                        <button type="button" class="btn btn-success">Ver Asistencia</button>
-                        <button type="button" class="btn btn-primary">Gestionar</button>
+                        <a asp-action="GestionUsuarios" asp-route-eventId="@evento.eventoid" class="btn btn-success btn-sm">Ver inscripciones</a>
+                        <a asp-action="VerSesiones" asp-controller="Admin" asp-route-id="@evento.eventoid" class="btn btn-primary btn-sm">Ver Asistencia</a>
                     </div>
                 </div>
             </div>
@@ -100,3 +155,232 @@ else
     </div>
 }
 
+<!-- Modal de confirmación -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">Cambiar Estado del Evento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                ¿Estás seguro de que deseas cambiar el estado del evento a "<span id="estadoNombreModal"></span>"?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirmarCambio">Sí, Cambiar Estado</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            let eventoId = null;
+            let nuevoEstadoId = null;
+            let nuevoEstadoNombre = null;
+
+            // Manejar clic en opción de estado
+            $('.cambiar-estado').on('click', function (e) {
+                e.preventDefault();
+
+                eventoId = $(this).data('eventoid');
+                nuevoEstadoId = $(this).data('estadoid');
+                nuevoEstadoNombre = $(this).data('estadonombre');
+
+                // Mostrar modal de confirmación
+                $('#estadoNombreModal').text(nuevoEstadoNombre);
+                $('#confirmModal').modal('show');
+            });
+
+            // Confirmar cambio de estado
+            $('#confirmarCambio').on('click', function () {
+                if (eventoId && nuevoEstadoId) {
+                    cambiarEstadoEvento(eventoId, nuevoEstadoId);
+                }
+            });
+
+            function cambiarEstadoEvento(eventoId, estadoId) {
+                // Cerrar el modal inmediatamente
+                $('#confirmModal').modal('hide');
+
+                $.ajax({
+                    url: '@Url.Action("CambiarEstadoEvento", "Admin")',
+                    type: 'POST',
+                    data: {
+                        eventoId: eventoId,
+                        estadoId: estadoId
+                    },
+                    success: function (response) {
+                        console.log('Respuesta:', response);
+
+                        if (response.success) {
+                            // Recargar la página INMEDIATAMENTE sin mostrar mensaje
+                            location.reload();
+                        } else {
+                            // Solo mostrar SweetAlert si hay error
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: response.mensaje,
+                                confirmButtonText: 'Aceptar'
+                            });
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de conexión',
+                            text: 'No se pudo cambiar el estado del evento',
+                            confirmButtonText: 'Aceptar'
+                        });
+                    }
+                });
+            }
+        });
+    </script>
+
+    <style>
+
+        /* Control específico para la columna de estado */
+        .estado-columna {
+            min-width: 180px;
+            max-width: 220px;
+            flex: 0 0 auto;
+        }
+
+        .estado-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: nowrap;
+            min-height: 32px;
+        }
+
+        .estado-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            min-width: 100px;
+            text-align: center;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .estado-toggle {
+            padding: 3px 5px;
+            border-radius: 4px;
+            font-size: 11px;
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #6c757d;
+            flex-shrink: 0;
+        }
+
+        .estado-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .dropdown-estado {
+            display: inline-block;
+        }
+
+        .estado-toggle {
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #6c757d;
+        }
+
+            .estado-toggle:hover {
+                background-color: #f8f9fa;
+                border-color: #495057;
+            }
+
+        .estado-indicador {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .estado-abierto {
+            background-color: #28a745;
+        }
+
+        .estado-cerrado {
+            background-color: #ffc107;
+        }
+
+        .estado-finalizado {
+            background-color: #6c757d;
+        }
+
+        .estado-cancelado {
+            background-color: #dc3545;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+            .dropdown-item:hover {
+                background-color: #f8f9fa;
+            }
+
+        /* Asegurar que los badges mantengan sus colores */
+        .estado-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+            .estado-badge.estado-abierto {
+                background-color: #28a745;
+                color: white;
+            }
+
+            .estado-badge.estado-cerrado {
+                background-color: #ffc107;
+                color: black;
+            }
+
+            .estado-badge.estado-finalizado {
+                background-color: #6c757d;
+                color: white;
+            }
+
+            .estado-badge.estado-cancelado {
+                background-color: #dc3545;
+                color: white;
+            }
+
+        /* Iconos en las opciones del dropdown */
+        .dropdown-item i {
+            width: 14px;
+            text-align: center;
+            font-size: 12px;
+        }
+    </style>
+}

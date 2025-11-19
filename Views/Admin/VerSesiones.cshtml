@@ -1,6 +1,7 @@
-﻿@{
-    Layout = "_Layout_Usuario";
-    ViewData["Title"] = "Detalle del Evento";
+﻿@* Views/AdminEventos/Ver_Mas.cshtml (O el nombre de su vista) *@
+@* Asegúrese de cambiar el Layout a Admin *@
+@{
+    Layout = "_Layout_Admin";
     var evento = ViewBag.Evento;
     var sesiones = ViewBag.Sesiones;
 }
@@ -14,6 +15,7 @@
         max-width: 1400px;
         margin: 20px auto;
     }
+
     .badge-estado {
         color: white;
         padding: 8px 16px;
@@ -21,20 +23,25 @@
         font-size: 14px;
         font-weight: 600;
     }
+
     .badge-confirmada {
         background-color: #6366f1;
     }
+
     .badge-proceso {
         background-color: #f59e0b;
     }
+
     .badge-no-disponible {
         background-color: #9ca3af;
     }
+
     .fecha-hora {
         display: flex;
         gap: 10px;
         align-items: center;
     }
+
     .fecha-badge {
         background-color: #28a745;
         color: white;
@@ -45,15 +52,18 @@
         display: inline-block;
         transition: transform 0.2s ease;
     }
+
         .fecha-badge:hover {
             transform: scale(1.1);
         }
+
     .evento-titulo {
         font-size: 28px;
         font-weight: 700;
         color: #1f2937;
         margin-bottom: 15px;
     }
+
     .sesion-card {
         background-color: #ffffff;
         border-radius: 12px;
@@ -62,24 +72,28 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         border-left: 4px solid #28a745;
     }
+
     .sesion-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 15px;
     }
+
     .sesion-titulo {
         font-size: 20px;
         font-weight: 600;
         color: #1f2937;
         margin-bottom: 10px;
     }
+
     .sesion-descripcion {
         color: #6b7280;
         font-size: 15px;
         line-height: 1.6;
         margin-bottom: 20px;
     }
+
     .actividad-item {
         background-color: #28a745;
         color: white;
@@ -90,11 +104,13 @@
         cursor: pointer;
         transition: all 0.3s;
     }
+
         .actividad-item:hover {
             background-color: #d1d5db;
             transition: all 0.05s;
             color: #258cfb;
         }
+
     .actividad-nombre {
         font-size: 16px;
         font-weight: 600;
@@ -102,20 +118,24 @@
         justify-content: space-between;
         align-items: center;
     }
+
     .actividad-detalle {
         margin-top: 15px;
         padding-top: 15px;
         border-top: 1px solid #e5e7eb;
         display: none;
     }
+
         .actividad-detalle.show {
             display: block;
         }
+
     .actividad-descripcion {
         font-size: 14px;
         line-height: 1.6;
         margin-bottom: 12px;
     }
+
     .ponente-info {
         display: flex;
         align-items: center;
@@ -124,10 +144,12 @@
         font-size: 14px;
         font-weight: 500;
     }
+
     .chevron {
         font-size: 18px;
         transition: transform 0.3s;
     }
+
     .no-actividades,
     .no-sesiones {
         color: #9ca3af;
@@ -135,22 +157,77 @@
         padding: 15px;
         text-align: center;
     }
+
+    /* ESTILOS CORREGIDOS PARA LOS BOTONES */
     .boton-comprobante {
-        display: inline-block;
-        padding: 8px 16px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
         border-radius: 6px;
         border: none;
-        background-color: #f97316;
+        background-color: #6366f1;
         color: white;
         font-weight: 600;
-        margin-top: 10px;
-        cursor: not-allowed;
-        opacity: 0.6;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 14px;
     }
+
+        .boton-comprobante:hover {
+            background-color: #4f46e5;
+            color: white;
+            text-decoration: none;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+    .btn-gestionar {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 6px;
+        background-color: #6c75fb;
+        color: white;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+        .btn-gestionar:hover {
+            background-color: #5560e9;
+            color: white;
+            text-decoration: none;
+            transform: translateY(-1px);
+        }
+
     .boton-container {
         display: flex;
         justify-content: flex-end;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .actividad-acciones {
+        display: flex;
+        gap: 10px;
         margin-top: 15px;
+        flex-wrap: wrap;
+    }
+
+    /* Asegurar que los enlaces tengan cursor pointer */
+    a {
+        cursor: pointer;
+    }
+
+    .btn {
+        cursor: pointer;
     }
 </style>
 
@@ -162,13 +239,7 @@
             DateTime? fechaInicio = sesion.fecha_inicio as DateTime?;
             <div class="sesion-card">
                 <div class="sesion-header">
-                    @{
-                        var estadoInscripcion = ViewBag.InscripcionEstado as string;
-                        var claseEstado = estadoInscripcion == "Confirmada" ? "badge-confirmada"
-                        : estadoInscripcion == "En proceso" ? "badge-proceso"
-                        : "badge-no-disponible";
-                    }
-                    <div class="badge-estado @claseEstado">@estadoInscripcion</div>
+                    <div></div>
                     @if (fechaInicio != null)
                     {
                         <div class="fecha-hora">
@@ -203,23 +274,38 @@
                                     </svg>
                                     <span>Ponente: @actividad.ponenteNombre</span>
                                 </div>
-                                <a asp-action="InfoActividad" asp-route-id="@actividad.agendaid" class="btn btn-success btn-sm">
-                                    Ver más
-                                </a>
+                                <div class="actividad-acciones">
+                                    <a asp-controller="Admin" asp-action="GestionActividad"
+                                       asp-route-id="@actividad.agendaid" class="btn-gestionar">
+                                        <i class="fas fa-edit"></i> Gestionar Actividad
+                                    </a>
+                                </div>
                             </div>
-
                         </div>
                     }
 
                     <div class="boton-container">
-                        <button class="boton-comprobante" disabled>
-                            Descargar comprobante
-                        </button>
+                        <a asp-action="GestionAsistencias"
+                           asp-controller="Admin"
+                           asp-route-eventoId="@evento.eventoid"
+                           asp-route-sesionId="@sesion.sesionid"
+                           class="boton-comprobante">
+                            <i class="fas fa-clipboard-check"></i> Gestionar Asistencia
+                        </a>
                     </div>
                 }
                 else
                 {
                     <div class="no-actividades">No hay actividades programadas para esta sesión</div>
+                    <div class="boton-container">
+                        <a asp-action="GestionAsistencias"
+                           asp-controller="Admin"
+                           asp-route-eventoId="@evento.eventoid"
+                           asp-route-sesionId="@sesion.sesionid"
+                           class="boton-comprobante">
+                            <i class="fas fa-clipboard-check"></i> Gestionar Asistencia
+                        </a>
+                    </div>
                 }
             </div>
         }

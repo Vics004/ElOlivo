@@ -1,0 +1,752 @@
+﻿@{
+    Layout = "_Layout_Admin";
+}
+
+<style>
+    .fondo-verde {
+        background-color: #5abf73;
+        width: calc(100% + 40px);
+        padding: 30px 20px;
+        margin-left: -20px;
+        margin-right: -20px;
+        margin-top: -45px;
+        margin-bottom: -45px;
+        min-height: calc(100vh - 60px);
+    }
+
+    .tarjeta-evento {
+        max-width: 650px;
+        width: 90%;
+        border-radius: 15px;
+        border: none;
+        margin: 0 auto;
+    }
+
+    .main-content {
+        overflow-x: hidden;
+    }
+
+    .titulo-seccion {
+        color: #333;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .insignia-fase {
+        background-color: #6c75fb;
+        padding: 8px 15px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        border-radius: 10px;
+        color: white;
+    }
+
+    .icono-busqueda {
+        background-color: #fff;
+        border-left: none;
+        cursor: pointer;
+        color: #888;
+        border: 1px solid #ced4da;
+        border-left: none;
+    }
+
+    .input-group input {
+        border-right: none;
+    }
+
+    .grupo-fecha-hora {
+        position: relative;
+    }
+
+    .input-fecha::-webkit-calendar-picker-indicator {
+        opacity: 0;
+        width: 25px;
+        height: 25px;
+        cursor: pointer;
+    }
+
+    .icono-calendario {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #888;
+        pointer-events: none;
+        font-size: 1.1rem;
+    }
+
+    .boton-siguiente {
+        background-color: #6c75fb;
+        border-color: #6c75fb;
+        font-weight: 600;
+        padding: 10px 30px;
+        border-radius: 8px;
+    }
+
+        .boton-siguiente:hover {
+            background-color: #5560e9;
+            border-color: #5560e9;
+        }
+
+    .invisible {
+        visibility: hidden;
+    }
+
+    textarea.form-control {
+        resize: vertical;
+    }
+
+    .form-group {
+        margin-bottom: 2rem;
+    }
+
+    .correo-valido {
+        border-color: #28a745 !important;
+        background-color: #d4edda !important;
+    }
+
+    .correo-invalido {
+        border-color: #dc3545 !important;
+        background-color: #f8d7da !important;
+    }
+
+    .fecha-invalida {
+        border-color: #dc3545 !important;
+    }
+
+    .mensaje-error-fecha {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: none;
+    }
+
+    .is-invalid {
+        border-color: #dc3545 !important;
+        animation: shake 0.5s;
+    }
+
+    @@keyframes shake {
+        0%, 100% {
+            transform: translateX(0);
+        }
+
+        25% {
+            transform: translateX(-5px);
+        }
+
+        75% {
+            transform: translateX(5px);
+        }
+    }
+
+    .icono-busqueda {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: calc(2.25rem + 2px);
+        border-left: 0;
+    }
+
+    .cargando-validacion {
+        opacity: 0.7;
+        pointer-events: none;
+    }
+
+    .conflicto-horario {
+        border: 2px solid #dc3545 !important;
+        background-color: #fff5f5;
+    }
+
+    .horario-disponible {
+        border: 2px solid #28a745 !important;
+        background-color: #f8fff9;
+    }
+</style>
+
+<div class="fondo-verde">
+    <div class="card tarjeta-evento shadow-lg">
+        <div class="card-body p-5">
+            <h3 class="text-center mb-4 text-success font-weight-bold">Crear Nuevo Evento</h3>
+
+            <div class="d-flex justify-content-end mb-4">
+                <span class="insignia-fase">Fase 1 de 2</span>
+            </div>
+
+            <form id="formFase1">
+                <h5 class="titulo-seccion">Información del evento</h5>
+
+               
+                <div class="form-group">
+                    <label for="Nombre">Nombre</label>
+                    <input type="text" class="form-control" id="Nombre" name="Nombre"
+                           value="@ViewBag.Nombre" placeholder="Ingrese el nombre del evento" required>
+                </div>
+
+               
+                <div class="form-group">
+                    <label for="Descripcion">Descripción</label>
+                    <textarea name="Descripcion" class="form-control" id="Descripcion" rows="3"
+                              placeholder="Ingrese una descripción del evento">@ViewBag.Descripcion</textarea>
+                </div>
+
+               
+                <div class="form-group">
+                    <label for="Correo">Correo del Administrador</label>
+                    <div class="input-group">
+                        <input type="email" name="Correo" class="form-control" id="Correo"
+                               value="@ViewBag.Correo" placeholder="Asigne un administrador" required>
+                        <div class="input-group-append">
+                            <span class="input-group-text icono-busqueda" style="cursor: pointer;" id="btnBuscarAdmin">
+                                <i class="fas fa-search"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <small id="mensajeValidacion" class="form-text"></small>
+                </div>
+
+               
+                <div class="form-group">
+                    <label>Fecha inicio y hora</label>
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="grupo-fecha-hora">
+                                <input type="date" name="FechaInicio" class="form-control input-fecha"
+                                       id="FechaInicioInput" value="@ViewBag.FechaInicio" required>
+                                <span class="icono-calendario"><i class="far fa-calendar-alt"></i></span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <select name="HoraInicio" class="form-control" id="HoraInicioSelect" required>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div class="form-group">
+                    <label>Fecha fin y hora</label>
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="grupo-fecha-hora">
+                                <input type="date" name="FechaFin" class="form-control input-fecha"
+                                       id="FechaFinInput" value="@ViewBag.FechaFin" required>
+                                <span class="icono-calendario"><i class="far fa-calendar-alt"></i></span>
+                            </div>
+                            <small id="mensajeErrorFechaFin" class="mensaje-error-fecha">
+                                <i class="fas fa-exclamation-circle"></i> La fecha fin debe ser posterior a la fecha inicio
+                            </small>
+                        </div>
+                        <div class="col-sm-6">
+                            <select name="HoraFin" class="form-control" id="HoraFinSelect" required>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div class="form-group">
+                    <label for="UbicacionURL">Ubicación URL</label>
+                    <input type="url" name="UbicacionURL" class="form-control" id="UbicacionURL"
+                           value="@ViewBag.UbicacionURL" placeholder="URL">
+                </div>
+
+                <div class="d-flex justify-content-end mt-5">
+                    <button type="button" id="btnSiguiente" class="btn btn-primary boton-siguiente" disabled>
+                        Siguiente
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const fecha = urlParams.get('fecha');
+        const hora = urlParams.get('hora');
+
+        const fechaInput = document.getElementById('FechaInicioInput');
+        const fechaFinInput = document.getElementById('FechaFinInput');
+        const horaSelectInicio = document.getElementById('HoraInicioSelect');
+        const horaSelectFin = document.getElementById('HoraFinSelect');
+        const correoInput = document.getElementById('Correo');
+        const btnBuscarAdmin = document.getElementById('btnBuscarAdmin');
+        const btnSiguiente = document.getElementById('btnSiguiente');
+        const mensajeValidacion = document.getElementById('mensajeValidacion');
+        const mensajeErrorFechaFin = document.getElementById('mensajeErrorFechaFin');
+
+       
+        const nombreInput = document.getElementById('Nombre');
+        const descripcionInput = document.getElementById('Descripcion');
+        const ubicacionURLInput = document.getElementById('UbicacionURL');
+
+        let adminValido = false;
+        let usuarioAdminId = null;
+        let fechasValidas = true;
+        let hayConflictoHorario = false;
+
+        
+        const hoy = new Date().toISOString().split('T')[0];
+        fechaInput.min = hoy;
+        fechaFinInput.min = hoy;
+
+        
+        if (fecha) {
+            fechaInput.value = fecha;
+        }
+
+        
+        btnSiguiente.disabled = false;
+
+             
+        setTimeout(() => {
+            
+            if ('@ViewBag.HoraInicio' && '@ViewBag.HoraInicio' !== '') {
+                horaSelectInicio.value = '@ViewBag.HoraInicio';
+                
+            }
+
+      
+            if ('@ViewBag.HoraFin' && '@ViewBag.HoraFin' !== '') {
+                horaSelectFin.value = '@ViewBag.HoraFin';
+                
+            }
+
+            
+            if (horaSelectInicio.value) {
+                actualizarHoraFin();
+            }
+
+           
+            if ('@ViewBag.Correo' && '@ViewBag.Correo' !== '') {
+                correoInput.classList.add('correo-valido');
+                mensajeValidacion.className = 'form-text text-success';
+                mensajeValidacion.textContent = '✓ Administrador pre-cargado';
+                adminValido = true;
+            }
+        }, 100);
+
+       
+        function actualizarEstadoBoton() {
+           
+
+            if (hayConflictoHorario) {
+                btnSiguiente.disabled = true;
+                btnSiguiente.classList.add('disabled');
+                btnSiguiente.style.opacity = '0.5';
+                btnSiguiente.style.cursor = 'not-allowed';
+                btnSiguiente.title = 'No se puede continuar porque hay un conflicto de horario';
+               
+            } else {
+                btnSiguiente.disabled = false;
+                btnSiguiente.classList.remove('disabled');
+                btnSiguiente.style.opacity = '1';
+                btnSiguiente.style.cursor = 'pointer';
+                btnSiguiente.title = '';
+               
+            }
+        }
+
+        
+        fechaInput.addEventListener('change', function () {
+            fechaFinInput.min = fechaInput.value || hoy;
+            if (fechaFinInput.value && fechaFinInput.value < fechaInput.value) {
+                fechaFinInput.value = '';
+                fechaFinInput.classList.add('fecha-invalida');
+                mensajeErrorFechaFin.style.display = 'block';
+                fechasValidas = false;
+            }
+            validarFechas();
+            validarConflictoEnTiempoReal();
+        });
+
+       
+        fechaFinInput.addEventListener('change', function () {
+            validarFechas();
+            validarConflictoEnTiempoReal();
+        });
+
+        
+        function validarFechas() {
+            const fechaInicio = fechaInput.value;
+            const fechaFin = fechaFinInput.value;
+
+            if (fechaInicio && fechaFin) {
+                if (fechaFin < fechaInicio) {
+                    fechaFinInput.classList.add('fecha-invalida');
+                    mensajeErrorFechaFin.style.display = 'block';
+                    fechasValidas = false;
+                } else {
+                    fechaFinInput.classList.remove('fecha-invalida');
+                    mensajeErrorFechaFin.style.display = 'none';
+                    fechasValidas = true;
+                }
+            } else {
+                fechaFinInput.classList.remove('fecha-invalida');
+                mensajeErrorFechaFin.style.display = 'none';
+                fechasValidas = true;
+            }
+        }
+
+       
+        function validarConflictoHorario() {
+            const fechaInicio = fechaInput.value;
+            const horaInicio = horaSelectInicio.value;
+            const fechaFin = fechaFinInput.value;
+            const horaFin = horaSelectFin.value;
+
+           
+            if (!fechaInicio || !horaInicio || !fechaFin || !horaFin) {
+               
+                return Promise.resolve({ tieneConflicto: false });
+            }
+
+            return fetch(`/Admin/ValidarConflictoEvento?fechaInicio=${fechaInicio}&horaInicio=${horaInicio}&fechaFin=${fechaFin}&horaFin=${horaFin}`)
+                .then(response => response.json())
+                .then(data => {
+                    
+                    return data;
+                })
+                .catch(error => {
+                   
+                    return { tieneConflicto: false };
+                });
+        }
+
+       
+        let timeoutValidacion = null;
+
+        async function validarConflictoEnTiempoReal() {
+            clearTimeout(timeoutValidacion);
+
+            timeoutValidacion = setTimeout(async () => {
+                const fechaInicio = fechaInput.value;
+                const horaInicio = horaSelectInicio.value;
+                const fechaFin = fechaFinInput.value;
+                const horaFin = horaSelectFin.value;
+
+                if (fechaInicio && horaInicio && fechaFin && horaFin) {
+                    try {
+                        const resultado = await validarConflictoHorario();
+                        hayConflictoHorario = resultado.tieneConflicto;
+
+                        if (resultado.tieneConflicto) {
+                            mostrarMensajeConflicto(resultado.mensaje);
+                            actualizarEstadoBoton(); 
+                        } else {
+                            ocultarMensajeConflicto();
+                            actualizarEstadoBoton(); 
+                        }
+                    } catch (error) {
+                        console.error('Error al validar:', error);
+                        hayConflictoHorario = false;
+                        ocultarMensajeConflicto();
+                        actualizarEstadoBoton();
+                    }
+                } else {
+                    ocultarMensajeConflicto();
+                    hayConflictoHorario = false;
+                    actualizarEstadoBoton();
+                }
+            }, 500);
+        }
+
+     
+        function mostrarMensajeConflicto(mensaje) {
+            let mensajeDiv = document.getElementById('mensajeConflictoHorario');
+
+            if (!mensajeDiv) {
+                mensajeDiv = document.createElement('div');
+                mensajeDiv.id = 'mensajeConflictoHorario';
+                mensajeDiv.className = 'alert alert-danger mt-2';
+                mensajeDiv.style.display = 'none';
+                const grupoFechaFin = fechaFinInput.closest('.form-group');
+                grupoFechaFin.appendChild(mensajeDiv);
+            }
+
+            mensajeDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <strong>Conflicto de horario:</strong> ${mensaje}`;
+            mensajeDiv.style.display = 'block';
+            
+        }
+
+       
+        function ocultarMensajeConflicto() {
+            const mensajeDiv = document.getElementById('mensajeConflictoHorario');
+            if (mensajeDiv) {
+                mensajeDiv.style.display = 'none';
+                
+            }
+        }
+
+       
+        function formatTime12h(time24) {
+            const [hours, minutes] = time24.split(':').map(Number);
+            const suffix = hours >= 12 ? 'PM' : 'AM';
+            const hour12 = hours % 12 || 12;
+            const minuteStr = minutes.toString().padStart(2, '0');
+            return `${hour12}:${minuteStr} ${suffix}`;
+        }
+
+       
+        function generateTimeOptions(selectElement, defaultTime) {
+            selectElement.innerHTML = '<option value="">-- Seleccionar hora --</option>';
+            for (let h = 0; h < 24; h++) {
+                for (let m = 0; m < 60; m += 30) {
+                    const hour24 = h.toString().padStart(2, '0');
+                    const minute24 = m.toString().padStart(2, '0');
+                    const value24 = `${hour24}:${minute24}`;
+                    const text12h = formatTime12h(value24);
+                    const option = document.createElement('option');
+                    option.value = value24;
+                    option.textContent = text12h;
+                    selectElement.appendChild(option);
+                }
+            }
+            if (defaultTime) {
+                selectElement.value = defaultTime;
+            }
+        }
+
+        generateTimeOptions(horaSelectInicio, hora || '09:00');
+
+        let defaultFinTime = '10:00';
+        if (hora) {
+            let [h, m] = hora.split(':').map(Number);
+            h = (h + 1) % 24;
+            defaultFinTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        }
+        generateTimeOptions(horaSelectFin, defaultFinTime);
+
+        
+        function actualizarHoraFin() {
+            const horaInicio = horaSelectInicio.value;
+
+            if (!horaInicio) {
+                generateTimeOptions(horaSelectFin, '');
+                return;
+            }
+
+            const horaFinActual = horaSelectFin.value;
+
+            const [h, m] = horaInicio.split(':').map(Number);
+            let siguienteHora = h;
+            let siguienteMin = m + 30;
+
+            if (siguienteMin >= 60) {
+                siguienteMin = 0;
+                siguienteHora = (h + 1) % 24;
+            }
+
+            const horaMinima = `${siguienteHora.toString().padStart(2, '0')}:${siguienteMin.toString().padStart(2, '0')}`;
+
+            horaSelectFin.innerHTML = '<option value="">-- Seleccionar hora --</option>';
+
+            for (let hora = 0; hora < 24; hora++) {
+                for (let min = 0; min < 60; min += 30) {
+                    const hour24 = hora.toString().padStart(2, '0');
+                    const minute24 = min.toString().padStart(2, '0');
+                    const value24 = `${hour24}:${minute24}`;
+
+                    if (value24 >= horaMinima) {
+                        const text12h = formatTime12h(value24);
+                        const option = document.createElement('option');
+                        option.value = value24;
+                        option.textContent = text12h;
+                        horaSelectFin.appendChild(option);
+                    }
+                }
+            }
+
+            if (horaFinActual && horaFinActual >= horaMinima) {
+                horaSelectFin.value = horaFinActual;
+            } else {
+                horaSelectFin.value = horaMinima;
+            }
+        }
+
+       
+        horaSelectInicio.addEventListener('change', function () {
+            actualizarHoraFin();
+            validarConflictoEnTiempoReal();
+        });
+
+        horaSelectFin.addEventListener('change', validarConflictoEnTiempoReal);
+
+        if (horaSelectInicio.value) {
+            actualizarHoraFin();
+        }
+
+       
+        btnBuscarAdmin.addEventListener('click', function () {
+            const correo = correoInput.value.trim();
+            if (!correo) {
+                alert('Por favor ingrese un correo');
+                return;
+            }
+
+            fetch(`/Admin/ValidarAdministrador?correo=${encodeURIComponent(correo)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.existe) {
+                        correoInput.classList.remove('correo-invalido');
+                        correoInput.classList.add('correo-valido');
+                        mensajeValidacion.className = 'form-text text-success';
+                        mensajeValidacion.textContent = '✓ Administrador encontrado';
+                        adminValido = true;
+                        usuarioAdminId = data.usuarioAdminId;
+                    } else {
+                        correoInput.classList.remove('correo-valido');
+                        correoInput.classList.add('correo-invalido');
+                        mensajeValidacion.className = 'form-text text-danger';
+                        mensajeValidacion.textContent = '✗ No existe un administrador con este correo';
+                        adminValido = false;
+                        usuarioAdminId = null;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al validar el administrador');
+                });
+        });
+
+        correoInput.addEventListener('input', function () {
+            correoInput.classList.remove('correo-valido', 'correo-invalido');
+            mensajeValidacion.textContent = '';
+            adminValido = false;
+        });
+
+       
+        btnSiguiente.addEventListener('click', async function () {
+           
+            if (hayConflictoHorario) {
+                alert('⚠️ No se puede crear el evento porque ya existe otro evento con las mismas fechas y horarios.\n\nPor favor modifique las fechas o las horas del evento.');
+                
+                return;
+            }
+
+            const nombre = nombreInput.value.trim();
+            const descripcion = descripcionInput.value.trim();
+            const correo = correoInput.value.trim();
+            const fechaInicio = fechaInput.value;
+            const horaInicio = horaSelectInicio.value;
+            const fechaFin = fechaFinInput.value;
+            const horaFin = horaSelectFin.value;
+            const ubicacionURL = ubicacionURLInput.value.trim();
+
+            if (!nombre) {
+                alert('Por favor ingrese el nombre del evento');
+                nombreInput.focus();
+                nombreInput.classList.add('is-invalid');
+                setTimeout(() => nombreInput.classList.remove('is-invalid'), 3000);
+                return;
+            }
+
+            if (!descripcion) {
+                alert('Por favor ingrese la descripción del evento');
+                descripcionInput.focus();
+                descripcionInput.classList.add('is-invalid');
+                setTimeout(() => descripcionInput.classList.remove('is-invalid'), 3000);
+                return;
+            }
+
+            if (!correo) {
+                alert('Por favor ingrese el correo del administrador');
+                correoInput.focus();
+                correoInput.classList.add('is-invalid');
+                setTimeout(() => correoInput.classList.remove('is-invalid'), 3000);
+                return;
+            }
+
+            if (!adminValido) {
+                alert('Por favor valide el correo del administrador usando el botón de búsqueda');
+                correoInput.focus();
+                return;
+            }
+
+            if (!fechaInicio) {
+                alert('Por favor seleccione la fecha de inicio del evento');
+                fechaInput.focus();
+                fechaInput.classList.add('is-invalid');
+                setTimeout(() => fechaInput.classList.remove('is-invalid'), 3000);
+                return;
+            }
+
+            if (!horaInicio) {
+                alert('Por favor seleccione la hora de inicio del evento');
+                horaSelectInicio.focus();
+                horaSelectInicio.classList.add('is-invalid');
+                setTimeout(() => horaSelectInicio.classList.remove('is-invalid'), 3000);
+                return;
+            }
+
+            if (!fechaFin) {
+                alert('Por favor seleccione la fecha de fin del evento');
+                fechaFinInput.focus();
+                fechaFinInput.classList.add('is-invalid');
+                setTimeout(() => fechaFinInput.classList.remove('is-invalid'), 3000);
+                return;
+            }
+
+            if (!horaFin) {
+                alert('Por favor seleccione la hora de fin del evento');
+                horaSelectFin.focus();
+                horaSelectFin.classList.add('is-invalid');
+                setTimeout(() => horaSelectFin.classList.remove('is-invalid'), 3000);
+                return;
+            }
+
+            if (!fechasValidas) {
+                alert('Por favor corrija las fechas. La fecha fin debe ser posterior a la fecha inicio');
+                fechaFinInput.focus();
+                return;
+            }
+
+            if (!ubicacionURL) {
+                alert('Por favor ingrese la ubicación URL del evento');
+                ubicacionURLInput.focus();
+                ubicacionURLInput.classList.add('is-invalid');
+                setTimeout(() => ubicacionURLInput.classList.remove('is-invalid'), 3000);
+                return;
+            }
+
+           
+            const formData = {
+                Nombre: nombre,
+                Descripcion: descripcion,
+                Correo: correo,
+                UsuarioAdminId: usuarioAdminId,
+                FechaInicio: fechaInicio,
+                HoraInicio: horaInicio,
+                FechaFin: fechaFin,
+                HoraFin: horaFin,
+                UbicacionURL: ubicacionURL
+            };
+
+          
+
+            fetch('/Admin/GuardarFase1', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = '/Admin/FaseDos';
+                    } else {
+                        alert('Error al guardar los datos');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al procesar la solicitud');
+                });
+        });
+    });
+</script>
